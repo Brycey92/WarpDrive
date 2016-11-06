@@ -552,17 +552,17 @@ public class WorldGenSmallShip extends WorldGenerator {
 			switch (rand.nextInt(14)) {
 			case 0: // Mass fabricator
 				if (WarpDriveConfig.isIndustrialCraft2Loaded) {
-					res = WarpDriveConfig.getModItemStack("IC2", "blockMachine", -1);
-					res.setItemDamage(14);
-					res.stackSize = 1; // + rand.nextInt(2);
+// 					res = WarpDriveConfig.getModItemStack("IC2", "blockMachine", -1);
+// 					res.setItemDamage(14);
+// 					res.stackSize = 1; // + rand.nextInt(2);
 					isDone = true;
 				}
 				break;
 				
 			case 1:
 				if (WarpDriveConfig.isIndustrialCraft2Loaded) {
-					res = WarpDriveConfig.getModItemStack("IC2", "blockNuke", -1);
-					res.stackSize = 1 + rand.nextInt(2);
+// 					res = WarpDriveConfig.getModItemStack("IC2", "blockNuke", -1);
+// 					res.stackSize = 1 + rand.nextInt(2);
 					isDone = true;
 				}
 				break;
