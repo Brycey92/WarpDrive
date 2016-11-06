@@ -139,6 +139,8 @@ local clearWarningTick = -1
 function ShowWarning(text)
   if term.isAvailable() then
     local sizeX, sizeY = component.gpu.getResolution()
+    SetCursorPos(1, sizeY)
+    ClearLine()
     SetColorWarning()
     SetCursorPos((sizeX - text:len() - 2) / 2, sizeY)
     Write(" " .. text .. " ")
@@ -156,7 +158,7 @@ function ClearWarning()
       SetCursorPos(1, sizeY)
       ClearLine()
       clearWarningTick = -1
-	end
+    end
   end
 end
 
@@ -238,14 +240,6 @@ function readInputNumber(currentValue)
       elseif char ~= 0 then
         ShowWarning("Key " .. char .. " " .. keycode .. " is invalid")
       end
-    elseif eventName == "key_up" then
-      -- drop it
-    elseif eventName == "touch" then
-      -- drop it
-    elseif eventName == "drop" then
-      -- drop it
-    elseif eventName == "drag" then
-      -- drop it
     elseif eventName == "interrupted" then
       inputAbort = true
     elseif not common_event(eventName, params[3]) then
@@ -289,14 +283,6 @@ function readInputText(currentValue)
       elseif char ~= 0 then
         ShowWarning("Key " .. char .. " " .. keycode .. " is invalid")
       end
-    elseif eventName == "key_up" then
-      -- drop it
-    elseif eventName == "touch" then
-      -- drop it
-    elseif eventName == "drop" then
-      -- drop it
-    elseif eventName == "drag" then
-      -- drop it
     elseif eventName == "interrupted" then
       inputAbort = true
     elseif not common_event(eventName, params[3]) then
@@ -311,8 +297,12 @@ function readInputText(currentValue)
   end
 end
 
-function readConfirmation()
-  ShowWarning("Are you sure? (y/n)")
+function readConfirmation(msg)
+  if msg == nil then
+    ShowWarning("Are you sure? (y/n)")
+  else
+    ShowWarning(msg)
+  end
   repeat
     local params = { event.pull() }
     local eventName = params[1]
@@ -325,14 +315,6 @@ function readConfirmation()
       else
         return false
       end
-    elseif eventName == "key_up" then
-      -- drop it
-    elseif eventName == "touch" then
-      -- drop it
-    elseif eventName == "drop" then
-      -- drop it
-    elseif eventName == "drag" then
-      -- drop it
     elseif eventName == "interrupted" then
       return false
     elseif not common_event(eventName, params[3]) then
@@ -347,6 +329,16 @@ function common_event(eventName, param)
   if eventName == "redstone" then
   --    redstone_event(param)
   elseif eventName == "timer" then
+  elseif eventName == "shipCoreCooldownDone" then
+    ShowWarning("Ship core cooldown done")
+  elseif eventName == "key_up" then
+  elseif eventName == "touch" then
+  elseif eventName == "drop" then
+  elseif eventName == "drag" then
+  elseif eventName == "component_added" then
+  elseif eventName == "component_removed" then
+  elseif eventName == "component_unavailable" then
+    -- ShowWarning("Event '" .. eventName .. "', " .. param .. " is unsupported")
   else
     return false
   end
@@ -362,31 +354,37 @@ end
 ----------- Configuration
 
 function data_save()
-  local file = fs.open("shipdata.txt", "w")
+  local file = fs.open("/disk/shipdata.txt", "w")
   if file ~= nil then
     file:write(serialization.serialize(data))
     file:close()
   else
     ShowWarning("No file system")
+    os.sleep(3)
   end
 end
 
 function data_read()
   data = { }
-  if fs.exists("shipdata.txt") then
-    local file = fs.open("shipdata.txt", "r")
-    local size = fs.size("shipdata.txt")
+  if fs.exists("/disk/shipdata.txt") then
+    local file = fs.open("/disk/shipdata.txt", "r")
+    local size = fs.size("/disk/shipdata.txt")
     local rawData = file:read(size)
     if rawData ~= nil then
       data = serialization.unserialize(rawData)
     end
     file:close()
+	if data == nil then data = {}; end
   end
   if data.core_summon == nil then data.core_summon = false; end
 end
 
 function data_setName()
-  ShowTitle("<==== Set name ====>")
+  if ship ~= nil then
+    ShowTitle("<==== Set ship name ====>")
+  else
+    ShowTitle("<==== Set name ====>")
+  end
   
   SetCursorPos(1, 2)
   Write("Enter ship name: ")
@@ -397,6 +395,15 @@ function data_setName()
   end
   -- FIXME computer.shutdown(true)
 end
+
+function string_split(source, sep)
+  local sep = sep or ":"
+  local fields = {}
+  local pattern = string.format("([^%s]+)", sep)
+  source:gsub(pattern, function(c) fields[#fields + 1] = c end)
+  return fields
+end
+
 
 ----------- Ship support
 
@@ -556,28 +563,36 @@ function core_page_setMovement()
   SetColorDefault()
   SetCursorPos(1, 3)
   
-  core_movement[1] = core_page_setDistanceAxis(2, "Front", core_movement[1], math.abs(core_front + core_back + 1))
-  core_movement[2] = core_page_setDistanceAxis(3, "Up"   , core_movement[2], math.abs(core_up + core_down + 1))
-  core_movement[3] = core_page_setDistanceAxis(4, "Right", core_movement[3], math.abs(core_left + core_right + 1))
+  core_movement[1] = core_page_setDistanceAxis(2, "Forward" , "Front", "Back", core_movement[1], math.abs(core_front + core_back + 1))
+  core_movement[2] = core_page_setDistanceAxis(4, "Vertical", "Up"   , "Down", core_movement[2], math.abs(core_up + core_down + 1))
+  core_movement[3] = core_page_setDistanceAxis(6, "Lateral" , "Right", "Left", core_movement[3], math.abs(core_left + core_right + 1))
   core_movement = { ship.movement(core_movement[1], core_movement[2], core_movement[3]) }
 end
 
-function core_page_setDistanceAxis(line, axis, userEntry, shipLength)
+function core_page_setDistanceAxis(line, axis, positive, negative, userEntry, shipLength)
   local maximumDistance = shipLength + 127
   if core_isInHyper and line ~= 3 then
     maximumDistance = shipLength + 127 * 100
   end
+  SetColorDisabled()
+  SetCursorPos(3, line + 1)
+  Write(positive .. " is " .. ( shipLength + 1) .. ", maximum is " ..  maximumDistance .. "      ")
+  SetCursorPos(3, line + 2)
+  Write(negative .. " is " .. (-shipLength - 1) .. ", maximum is " .. -maximumDistance .. "      ")
+  
+  SetColorDefault()
   repeat
     SetCursorPos(1, line)
-    Write(axis .. " (min " .. (shipLength + 1) .. ", max " .. maximumDistance .. "): ")
+    Write(axis .. " movement: ")
     userEntry = readInputNumber(userEntry)
-    if userEntry == 0 then
-      return userEntry
-    end
-    if math.abs(userEntry) <= shipLength or math.abs(userEntry) > maximumDistance then
+    if userEntry ~= 0 and (math.abs(userEntry) <= shipLength or math.abs(userEntry) > maximumDistance) then
       ShowWarning("Wrong distance. Try again.")
     end
-  until math.abs(userEntry) > shipLength and math.abs(userEntry) <= maximumDistance
+  until userEntry == 0 or (math.abs(userEntry) > shipLength and math.abs(userEntry) <= maximumDistance)
+  SetCursorPos(1, line + 1)
+  ClearLine()
+  SetCursorPos(1, line + 2)
+  ClearLine()
   
   return userEntry
 end
@@ -613,14 +628,6 @@ function core_page_setRotation()
       else
         ShowWarning("Key " .. char .. " " .. keycode .. " is invalid")
       end
-    elseif eventName == "key_up" then
-    -- drop it
-    elseif eventName == "touch" then
-      -- drop it
-    elseif eventName == "drop" then
-      -- drop it
-    elseif eventName == "drag" then
-      -- drop it
     elseif eventName == "interrupted" then
       inputAbort = true
     elseif not common_event(eventName, params[3]) then
@@ -660,8 +667,8 @@ function core_page_summon()
     SetColorTitle()
     ShowMenu("Press enter to exit")
     SetColorDefault()
-	readInputNumber("")
-	return
+    readInputNumber("")
+    return
   end
   
   for i = 1, #playersArray do
@@ -759,7 +766,6 @@ function core_key(char, keycode)
   if char == 77 or char == 109 then -- M
     core_page_setMovement()
     core_page_setRotation()
-    data_save()
     return true
   elseif char == 84 or char == 116 then -- T
     if data.core_summon then
@@ -771,12 +777,11 @@ function core_key(char, keycode)
     return true
   elseif char == 68 or char == 100 then -- D
     core_page_setDimensions()
-    data_save()
     return true
   elseif char == 74 or char == 106 then -- J
     core_warp()
     return true
-  elseif char == 67 or char == 99 then -- C
+  elseif char == 67 or char == 99 or keycode == 46 then -- C
     core_page_summon()
     return true
   elseif char == 66 or char == 98 then -- B
@@ -795,7 +800,7 @@ function core_key(char, keycode)
     end
     -- rs.setOutput(alarm_side, false)
     return true
-  elseif char == 78 or char == 110 then
+  elseif char == 78 or char == 110 then -- N
     data_setName()
     return true
   end
@@ -823,10 +828,12 @@ until event.pull(0) == nil
 ship = nil
 for address, componentType in component.list() do
   os.sleep(0)
+  Write("Checking " .. componentType .. " ")
   if componentType == "warpdriveShipController" then
-    WriteLn("Wrapping " .. componentType)
+    Write("wrapping!")
     ship = component.proxy(address)
   end
+  WriteLn("")
 end
 
 if not computer.address() and ship ~= nil then
@@ -845,6 +852,11 @@ function connections_page()
     SetColorSuccess()
     WriteLn("Ship controller detected")
   end
+  
+  WriteLn("")
+  SetColorTitle()
+  WriteLn("Please refer to below menu for keyboard controls")
+  WriteLn("For example, press 1 to access Ship core page")
 end
 
 -- peripheral boot up
@@ -899,18 +911,6 @@ repeat
       ShowWarning("Key " .. char .. " " .. keycode .. " is invalid")
       os.sleep(0.2)
     end
-    -- func(unpack(params))
-    -- abort, refresh = false, false
-  elseif eventName == "char" then
-    -- drop it
-  elseif eventName == "key_up" then
-    -- drop it
-  elseif eventName == "touch" then
-    -- drop it
-  elseif eventName == "drop" then
-    -- drop it
-  elseif eventName == "drag" then
-    -- drop it
   elseif eventName == "interrupted" then
     abort = true
   elseif not common_event(eventName, params[3]) then
@@ -934,4 +934,5 @@ end
 SetMonitorColorFrontBack(0xFFFFFF, 0x000000)
 term.clear()
 SetCursorPos(1, 1)
-Write("")
+WriteLn("Program terminated")
+WriteLn("Type reboot to restart it")

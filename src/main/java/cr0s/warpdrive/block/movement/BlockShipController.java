@@ -2,8 +2,6 @@ package cr0s.warpdrive.block.movement;
 
 import java.util.Random;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
@@ -15,27 +13,25 @@ import net.minecraft.world.World;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import cr0s.warpdrive.WarpDrive;
+import cr0s.warpdrive.block.BlockAbstractContainer;
 
-public class BlockShipController extends BlockContainer {
+public class BlockShipController extends BlockAbstractContainer {
 	private IIcon[] iconBuffer;
 	
-	private final int ICON_INACTIVE_SIDE = 0;
-	private final int ICON_BOTTOM = 1;
-	private final int ICON_TOP = 2;
-	private final int ICON_SIDE_ACTIVATED = 3;
+	private static final int ICON_INACTIVE_SIDE = 0;
+	private static final int ICON_BOTTOM = 1;
+	private static final int ICON_TOP = 2;
+	private static final int ICON_SIDE_ACTIVATED = 3;
 	
 	public BlockShipController() {
-		super(Material.rock);
-		setHardness(0.5F);
-		setStepSound(Block.soundTypeMetal);
-		setCreativeTab(WarpDrive.creativeTabWarpDrive);
+		super(Material.iron);
 		setBlockName("warpdrive.movement.ShipController");
 	}
 	
 	@Override
 	@SideOnly(Side.CLIENT)
 	public void registerBlockIcons(IIconRegister par1IconRegister) {
-		iconBuffer = new IIcon[10];
+		iconBuffer = new IIcon[11];
 		// Solid textures
 		iconBuffer[ICON_INACTIVE_SIDE] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerSideInactive");
 		iconBuffer[ICON_BOTTOM] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerBottom");
@@ -48,6 +44,7 @@ public class BlockShipController extends BlockContainer {
 		iconBuffer[ICON_SIDE_ACTIVATED + 4] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerSideActive4");
 		iconBuffer[ICON_SIDE_ACTIVATED + 5] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerSideActive5");
 		iconBuffer[ICON_SIDE_ACTIVATED + 6] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerSideActive6");
+		iconBuffer[ICON_SIDE_ACTIVATED + 7] = par1IconRegister.registerIcon("warpdrive:movement/shipControllerSideActive7");
 	}
 	
 	@Override

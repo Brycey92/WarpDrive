@@ -12,13 +12,13 @@ import cpw.mods.fml.common.Optional;
 import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.block.TileEntityAbstractEnergy;
 import cr0s.warpdrive.config.WarpDriveConfig;
-import cr0s.warpdrive.data.StarMapEntry;
+import cr0s.warpdrive.data.StarMapRegistryItem;
 import cr0s.warpdrive.data.VectorI;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 
 public class TileEntityRadar extends TileEntityAbstractEnergy {
-	private ArrayList<StarMapEntry> results;
+	private ArrayList<StarMapRegistryItem> results;
 	
 	// radius defined for next scan
 	private int radius = 0;
@@ -115,7 +115,7 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] start(Context context, Arguments arguments) {
-		return start(argumentsOCtoCC(arguments));
+		return start();
 	}
 	
 	@Callback
@@ -168,7 +168,7 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 		return new Integer[] { -1 };
 	}
 
-	private Object[] start(Object[] arguments) {
+	private Object[] start() {
 		// always clear results
 		results = null;
 		
@@ -178,7 +178,7 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 			return new Object[] { false, "Invalid radius" };
 		}
 		int energyRequired = calculateEnergyRequired(radius);
-		if (!consumeEnergy(energyRequired, false)) {
+		if (!energy_consume(energyRequired, false)) {
 			return new Object[] { false, "Insufficient energy" };
 		}
 		
@@ -204,7 +204,7 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 				return new Object[] { false, COMPUTER_ERROR_TAG, null, 0, 0, 0 };
 			}
 			if (index >= 0 && index < results.size()) {
-				StarMapEntry result = results.get(index);
+				StarMapRegistryItem result = results.get(index);
 				if (result != null) {
 					VectorI spaceCoordinates = result.getSpaceCoordinates();
 					return new Object[] { true, "SHIP", result.name, spaceCoordinates.x, spaceCoordinates.y, spaceCoordinates.z };
@@ -236,26 +236,27 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
 		
-		if (methodName.equals("radius")) {
-			return radius(arguments);
-			
-		} else if (methodName.equals("getEnergyRequired")) {
-			return getEnergyRequired(arguments);
-			
-		} else if (methodName.equals("getScanDuration")) {
-			return getScanDuration(arguments);
-			
-		} else if (methodName.equals("start")) {
-			return start(arguments);
-			
-		} else if (methodName.equals("getResultsCount")) {
-			if (results != null) {
-				return new Integer[] { results.size() };
-			}
-			return new Integer[] { -1 };
-			
-		} else if (methodName.equals("getResult")) {
-			return getResult(arguments);
+		switch (methodName) {
+			case "radius":
+				return radius(arguments);
+
+			case "getEnergyRequired":
+				return getEnergyRequired(arguments);
+
+			case "getScanDuration":
+				return getScanDuration(arguments);
+
+			case "start":
+				return start();
+
+			case "getResultsCount":
+				if (results != null) {
+					return new Integer[]{results.size()};
+				}
+				return new Integer[]{-1};
+
+			case "getResult":
+				return getResult(arguments);
 			
 		}
 		
@@ -263,12 +264,12 @@ public class TileEntityRadar extends TileEntityAbstractEnergy {
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.RADAR_MAX_ENERGY_STORED;
 	}
 	
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		return true;
 	}
 }

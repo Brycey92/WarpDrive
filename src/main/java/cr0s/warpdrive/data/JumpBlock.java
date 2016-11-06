@@ -5,36 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockBed;
-import net.minecraft.block.BlockButton;
-import net.minecraft.block.BlockChest;
-import net.minecraft.block.BlockCocoa;
-import net.minecraft.block.BlockDispenser;
-import net.minecraft.block.BlockDoor;
-import net.minecraft.block.BlockEndPortalFrame;
-import net.minecraft.block.BlockEnderChest;
-import net.minecraft.block.BlockFenceGate;
-import net.minecraft.block.BlockFurnace;
-import net.minecraft.block.BlockHopper;
-import net.minecraft.block.BlockHugeMushroom;
-import net.minecraft.block.BlockLadder;
-import net.minecraft.block.BlockLever;
-import net.minecraft.block.BlockLog;
-import net.minecraft.block.BlockPistonBase;
-import net.minecraft.block.BlockPistonExtension;
-import net.minecraft.block.BlockPistonMoving;
-import net.minecraft.block.BlockPortal;
-import net.minecraft.block.BlockPumpkin;
-import net.minecraft.block.BlockRailBase;
-import net.minecraft.block.BlockRedstoneDiode;
-import net.minecraft.block.BlockSign;
-import net.minecraft.block.BlockSkull;
-import net.minecraft.block.BlockStairs;
-import net.minecraft.block.BlockTorch;
-import net.minecraft.block.BlockTrapDoor;
-import net.minecraft.block.BlockTripWireHook;
-import net.minecraft.block.BlockVine;
+import net.minecraft.block.*;
 import net.minecraft.init.Blocks;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
@@ -43,11 +14,11 @@ import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
-
 import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.api.IBlockTransformer;
 import cr0s.warpdrive.api.ITransformation;
 import cr0s.warpdrive.block.detection.BlockMonitor;
+import cr0s.warpdrive.compat.CompatForgeMultipart;
 import cr0s.warpdrive.config.WarpDriveConfig;
 import cr0s.warpdrive.config.filler.Filler;
 
@@ -63,16 +34,7 @@ public class JumpBlock {
 	
 	public JumpBlock() {
 	}
-	
-	public JumpBlock(Block block, int blockMeta, int x, int y, int z) {
-		this.block = block;
-		this.blockMeta = blockMeta;
-		blockTileEntity = null;
-		this.x = x;
-		this.y = y;
-		this.z = z;
-	}
-	
+
 	public JumpBlock(Block block, int blockMeta, TileEntity tileEntity, int x, int y, int z) {
 		this.block = block;
 		this.blockMeta = blockMeta;
@@ -95,8 +57,8 @@ public class JumpBlock {
 			WarpDrive.logger.info("Forcing glass for invalid filler with null block at " + x + " " + y + " " + z);
 			filler.block = Blocks.glass;
 		}
-		this.block = filler.block;
-		this.blockMeta = filler.metadata;
+		block = filler.block;
+		blockMeta = filler.metadata;
 		blockNBT = (filler.tag != null) ? (NBTTagCompound) filler.tag.copy() : null;
 		this.x = x;
 		this.y = y;
@@ -117,9 +79,9 @@ public class JumpBlock {
 		return nbtExternal.copy();
 	}
 	
-	public void setExternal(final String modId, final NBTBase nbtExternal) {
+	private void setExternal(final String modId, final NBTBase nbtExternal) {
 		if (externals == null) {
-			externals = new HashMap();
+			externals = new HashMap<>();
 		}
 		externals.put(modId, nbtExternal);
 		if (WarpDriveConfig.LOGGING_JUMPBLOCKS) {
@@ -127,37 +89,37 @@ public class JumpBlock {
 		}
 	}
 	
+	private static final byte[] mrotNone           = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };
+	private static final byte[] mrotRail           = {  1,  0,  5,  4,  2,  3,  7,  8,  9,  6, 10, 11, 12, 13, 14, 15 };
+	private static final byte[] mrotAnvil          = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 12, 13, 14, 15 };
+	private static final byte[] mrotFenceGate      = {  1,  0,  2,  3,  5,  6,  7,  4,  8,  9, 10, 11, 12, 13, 14, 15 };
+	private static final byte[] mrotPumpkin        = {  1,  2,  3,  0,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Tripwire hook, Pumpkin, Jack-o-lantern
+	private static final byte[] mrotEndPortalFrame = {  1,  2,  3,  0,  5,  6,  7,  4,  8,  9, 10, 11, 12, 13, 14, 15 };	// EndPortal, doors (open/closed, base/top)
+	private static final byte[] mrotCocoa          = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 12, 13, 14, 15 };
+	private static final byte[] mrotRepeater       = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 13, 14, 15, 12 };	// Repeater (normal/lit), Comparator
+	private static final byte[] mrotBed            = {  1,  2,  3,  0,  4,  5,  6,  7,  9, 10, 11,  8, 12, 13, 14, 15 };
+	private static final byte[] mrotStair          = {  2,  3,  1,  0,  6,  7,  5,  4,  8,  9, 10, 11, 12, 13, 14, 15 };
+	private static final byte[] mrotSign           = {  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,  0,  1,  2,  3 };	// Sign, Skull
+	private static final byte[] mrotTrapDoor       = {  3,  2,  0,  1,  7,  6,  4,  5, 11, 10,  8,  9, 15, 14, 12, 13 };
+	private static final byte[] mrotLever          = {  7,  2,  3,  4,  1,  6,  5,  0, 15, 11, 12, 10,  9, 14, 13,  8 };
+	private static final byte[] mrotNetherPortal   = {  0,  2,  1,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };
+	private static final byte[] mrotVine           = {  0,  2,  4,  6,  8, 10, 12, 14,  1,  3,  5,  7,  9, 11, 13, 15 };
+	private static final byte[] mrotButton         = {  0,  3,  4,  2,  1,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Button, torch (normal, redstone lit/unlit)
+	private static final byte[] mrotMushroom       = {  0,  3,  6,  9,  2,  5,  8,  1,  4,  7, 10, 11, 12, 13, 14, 15 };	// Red/brown mushroom block
+	private static final byte[] mrotForgeDirection = {  0,  1,  5,  4,  2,  3,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Furnace (lit/normal), Dispenser/Dropper, Enderchest, Chest (normal/trapped), Hopper, Ladder, Wall sign
+	private static final byte[] mrotPiston         = {  0,  1,  5,  4,  2,  3,  6,  7,  8,  9, 13, 12, 10, 11, 14, 15 };	// Pistons (sticky/normal, base/head)
+	private static final byte[] mrotWoodLog        = {  0,  1,  2,  3,  8,  9, 10, 11,  4,  5,  6,  7, 12, 13, 14, 15 };
+	
 	// Return updated metadata from rotating a vanilla block
 	private int getMetadataRotation(NBTTagCompound nbtTileEntity, final byte rotationSteps) {
 		if (rotationSteps == 0) {
 			return blockMeta;
 		}
 		
-		final byte[] mrotNone           = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };
-		final byte[] mrotRail           = {  1,  0,  5,  4,  2,  3,  7,  8,  9,  6, 10, 11, 12, 13, 14, 15 };
-		final byte[] mrotAnvil          = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 12, 13, 14, 15 };
-		final byte[] mrotFenceGate      = {  1,  0,  2,  3,  5,  6,  7,  4,  8,  9, 10, 11, 12, 13, 14, 15 };
-		final byte[] mrotPumpkin        = {  1,  2,  3,  0,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Tripwire hook, Pumpkin, Jack-o-lantern
-		final byte[] mrotEndPortalFrame = {  1,  2,  3,  0,  5,  6,  7,  4,  8,  9, 10, 11, 12, 13, 14, 15 };	// EndPortal, doors (open/closed, base/top)
-		final byte[] mrotCocoa          = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 12, 13, 14, 15 };
-		final byte[] mrotRepeater       = {  1,  2,  3,  0,  5,  6,  7,  4,  9, 10, 11,  8, 13, 14, 15, 12 };	// Repeater (normal/lit), Comparator
-		final byte[] mrotBed            = {  1,  2,  3,  0,  4,  5,  6,  7,  9, 10, 11,  8, 12, 13, 14, 15 };
-		final byte[] mrotStair          = {  2,  3,  1,  0,  6,  7,  5,  4,  8,  9, 10, 11, 12, 13, 14, 15 };
-		final byte[] mrotSign           = {  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,  0,  1,  2,  3 };	// Sign, Skull
-		final byte[] mrotTrapDoor       = {  3,  2,  0,  1,  7,  6,  4,  5, 11, 10,  8,  9, 15, 14, 12, 13 };
-		final byte[] mrotLever          = {  7,  2,  3,  4,  1,  6,  5,  0, 15, 11, 12, 10,  9, 14, 13,  8 };
-		final byte[] mrotNetherPortal   = {  0,  2,  1,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };
-		final byte[] mrotVine           = {  0,  2,  4,  6,  8, 10, 12, 14,  1,  3,  5,  7,  9, 11, 13, 15 };
-		final byte[] mrotButton         = {  0,  3,  4,  2,  1,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Button, torch (normal, redstone lit/unlit)
-		final byte[] mrotMushroom       = {  0,  3,  6,  9,  2,  5,  8,  1,  4,  7, 10, 11, 12, 13, 14, 15 };	// Red/brown mushroom block
-		final byte[] mrotForgeDirection = {  0,  1,  5,  4,  2,  3,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };	// Furnace (lit/normal), Dispenser/Dropper, Enderchest, Chest (normal/trapped), Hopper, Ladder, Wall sign
-		final byte[] mrotPiston         = {  0,  1,  5,  4,  2,  3,  6,  7,  8,  9, 13, 12, 10, 11, 14, 15 };	// Pistons (sticky/normal, base/head)
-		final byte[] mrotWoodLog        = {  0,  1,  2,  3,  8,  9, 10, 11,  4,  5,  6,  7, 12, 13, 14, 15 };
-		
 		byte[] mrot = mrotNone;
 		if (block instanceof BlockRailBase) {
 			mrot = mrotRail;
-		} else if (block instanceof BlockRailBase) {
+		} else if (block instanceof BlockAnvil) {
 			mrot = mrotAnvil;
 		} else if (block instanceof BlockFenceGate) {
 			mrot = mrotFenceGate;
@@ -235,6 +197,8 @@ public class JumpBlock {
 			if (blockTileEntity != null) {
 				nbtToDeploy = new NBTTagCompound();
 				blockTileEntity.writeToNBT(nbtToDeploy);
+			} else if (blockNBT != null) {
+				nbtToDeploy = (NBTTagCompound) blockNBT.copy();
 			}
 			int newBlockMeta = blockMeta;
 			if (externals != null) {
@@ -297,25 +261,16 @@ public class JumpBlock {
 				
 				TileEntity newTileEntity = null;
 				boolean isForgeMultipart = false;
-				if (WarpDriveConfig.isForgeMultipartLoaded && nbtToDeploy.hasKey("id") && nbtToDeploy.getString("id") == "savedMultipart") {
+				if (WarpDriveConfig.isForgeMultipartLoaded && nbtToDeploy.hasKey("id") && nbtToDeploy.getString("id").equals("savedMultipart")) {
 					isForgeMultipart = true;
-					newTileEntity = (TileEntity) WarpDriveConfig.forgeMultipart_helper_createTileFromNBT.invoke(null, targetWorld, nbtToDeploy);
+					newTileEntity = (TileEntity) CompatForgeMultipart.methodMultipartHelper_createTileFromNBT.invoke(null, targetWorld, nbtToDeploy);
 					
 				} else if (block == WarpDriveConfig.CC_Computer || block == WarpDriveConfig.CC_peripheral
 						|| block == WarpDriveConfig.CCT_Turtle || block == WarpDriveConfig.CCT_Expanded || block == WarpDriveConfig.CCT_Advanced) {
 					newTileEntity = TileEntity.createAndLoadEntity(nbtToDeploy);
 					newTileEntity.invalidate();
 					
-				} /* else if (block == WarpDriveConfig.AS_Turbine) {
-					if (oldnbt.hasKey("zhuYao")) {
-						NBTTagCompound nbt1 = oldnbt.getCompoundTag("zhuYao");
-						nbt1.setDouble("x", newX);
-						nbt1.setDouble("y", newY);
-						nbt1.setDouble("z", newZ);
-						oldnbt.setTag("zhuYao", nbt1);
-					}
-					newTileEntity = TileEntity.createAndLoadEntity(oldnbt);
-					} /* No 1.7.10 version */
+				}
 				
 				if (newTileEntity == null) {
 					newTileEntity = TileEntity.createAndLoadEntity(nbtToDeploy);
@@ -327,28 +282,26 @@ public class JumpBlock {
 					
 					targetWorld.setTileEntity(target.posX, target.posY, target.posZ, newTileEntity);
 					if (isForgeMultipart) {
-						WarpDriveConfig.forgeMultipart_tileMultipart_onChunkLoad.invoke(newTileEntity);
-						WarpDriveConfig.forgeMultipart_helper_sendDescPacket.invoke(null, targetWorld, newTileEntity);
+						CompatForgeMultipart.methodTileMultipart_onChunkLoad.invoke(newTileEntity);
+						CompatForgeMultipart.methodMultipartHelper_sendDescPacket.invoke(null, targetWorld, newTileEntity);
 					}
-					return;
+					
+					newTileEntity.markDirty();
 				} else {
-					WarpDrive.logger.info(" deploy failed to create new tile entity at " + x + ", " + y + ", " + z + " blockId " + block + ":" + blockMeta);
-					WarpDrive.logger.info("NBT data was " + nbtToDeploy);
+					WarpDrive.logger.error(" deploy failed to create new tile entity at " + x + " " + y + " " + z + " blockId " + block + ":" + blockMeta);
+					WarpDrive.logger.error("NBT data was " + nbtToDeploy);
 				}
 			}
 		} catch (Exception exception) {
 			exception.printStackTrace();
-			String coordinates = "";
+			String coordinates;
 			try {
-				coordinates = " at " + x + ", " + y + ", " + z + " blockId " + block + ":" + blockMeta;
+				coordinates = " at " + x + " " + y + " " + z + " blockId " + block + ":" + blockMeta;
 			} catch (Exception dropMe) {
 				coordinates = " (unknown coordinates)";
 			}
-			WarpDrive.logger.info("moveBlockSimple exception at " + coordinates);
-			return;
+			WarpDrive.logger.error("moveBlockSimple exception at " + coordinates);
 		}
-		
-		return;
 	}
 	
 	public static void refreshBlockStateOnClient(World world, int x, int y, int z) {
@@ -356,21 +309,25 @@ public class JumpBlock {
 		if (tileEntity != null) {
 			Class<?> teClass = tileEntity.getClass();
 			if (WarpDriveConfig.LOGGING_JUMPBLOCKS) {
-				WarpDrive.logger.info("Tile at " + x + ", " + y + ", " + z + " is " + teClass + " derived from " + teClass.getSuperclass());
+				WarpDrive.logger.info("Tile at " + x + " " + y + " " + z + " is " + teClass + " derived from " + teClass.getSuperclass());
 			}
 			try {
-				if (teClass.getSuperclass().getName().contains("ic2.core.block")) {// IC2
+				String superClassName = teClass.getSuperclass().getName();
+				boolean isIC2 = superClassName.contains("ic2.core.block");
+				if (isIC2 || superClassName.contains("advsolar.common.tiles")) {// IC2
 					Method onUnloaded = teClass.getMethod("onUnloaded");
 					Method onLoaded = teClass.getMethod("onLoaded");
 					if (onUnloaded != null && onLoaded != null) {
 						onUnloaded.invoke(tileEntity);
 						onLoaded.invoke(tileEntity);
 					} else {
-						WarpDrive.logger.error("Missing IC2 (un)loaded events for TileEntity '" + teClass.getName() + "' at " + x + ", " + y + ", " + z + ". Please report this issue!");
+						WarpDrive.logger.error("Missing IC2 (un)loaded events for TileEntity '" + teClass.getName() + "' at " + x + " " + y + " " + z + ". Please report this issue!");
 					}
 					
 					tileEntity.updateContainingBlockInfo();
-					
+				}
+				
+				if (isIC2) {// IC2
 					// required in SSP during same dimension jump to update client with rotation data
 					if (teClass.getName().equals("ic2.core.block.wiring.TileEntityCable")) {
 						NetworkHelper_updateTileEntityField(tileEntity, "color");
@@ -398,7 +355,7 @@ public class JumpBlock {
 						// WarpDrive.logger.info("Tile has no getNetworkedFields method");
 					} catch (NoClassDefFoundError exception) {
 						if (WarpDriveConfig.LOGGING_JUMP) {
-							WarpDrive.logger.info("TileEntity " + teClass.getName() + " at " + x + ", " + y + ", " + z + " is missing a class definition");
+							WarpDrive.logger.info("TileEntity " + teClass.getName() + " at " + x + " " + y + " " + z + " is missing a class definition");
 							if (WarpDriveConfig.LOGGING_JUMPBLOCKS) {
 								exception.printStackTrace();
 							}
@@ -406,9 +363,77 @@ public class JumpBlock {
 					}
 				}
 			} catch (Exception exception) {
-				WarpDrive.logger.info("Exception involving TileEntity " + teClass.getName() + " at " + x + ", " + y + ", " + z);
+				WarpDrive.logger.info("Exception involving TileEntity " + teClass.getName() + " at " + x + " " + y + " " + z);
 				exception.printStackTrace();
 			}
+		}
+	}
+	
+	public void readFromNBT(NBTTagCompound tag) {
+		block = Block.getBlockFromName(tag.getString("block"));
+		if (block == null) {
+			if (WarpDriveConfig.LOGGING_BUILDING) {
+				WarpDrive.logger.warn("Ignoring unknown block " + tag.getString("block") + " from tag " + tag);
+			}
+			block = Blocks.air;
+			return;
+		}
+		blockMeta = tag.getByte("blockMeta");
+		blockTileEntity = null;
+		if (tag.hasKey("blockNBT")) {
+			blockNBT = tag.getCompoundTag("blockNBT");
+			
+			// Clear computer IDs
+			if (blockNBT.hasKey("computerID")) {
+				blockNBT.removeTag("computerID");
+			}
+			if (blockNBT.hasKey("oc:computer")) {
+				NBTTagCompound tagComputer = blockNBT.getCompoundTag("oc:computer");
+				tagComputer.removeTag("components");
+				tagComputer.removeTag("node");
+				blockNBT.setTag("oc:computer", tagComputer);
+			}
+		} else {
+			blockNBT = null;
+		}
+		x = tag.getInteger("x");
+		y = tag.getInteger("y");
+		z = tag.getInteger("z");
+		if (tag.hasKey("externals")) {
+			NBTTagCompound tagCompoundExternals = tag.getCompoundTag("externals");
+			externals = new HashMap<>();
+			for (Object key : tagCompoundExternals.func_150296_c()) {
+				assert (key instanceof String);
+				externals.put((String) key, tagCompoundExternals.getTag((String) key));
+			}
+		} else {
+			externals = null;
+		}
+	}
+	
+	public void writeToNBT(NBTTagCompound tag) {
+		tag.setString("block", Block.blockRegistry.getNameForObject(block));
+		tag.setByte("blockMeta", (byte)blockMeta);
+		if (blockTileEntity != null) {
+			NBTTagCompound tagCompound = new NBTTagCompound();
+			blockTileEntity.writeToNBT(tagCompound);
+			tag.setTag("blockNBT", tagCompound);
+		} else if (blockNBT != null) {
+			tag.setTag("blockNBT", blockNBT);
+		}
+		tag.setInteger("x", x);
+		tag.setInteger("y", y);
+		tag.setInteger("z", z);
+		if (externals != null && !externals.isEmpty()) {
+			NBTTagCompound tagCompoundExternals = new NBTTagCompound();
+			for (Entry<String, NBTBase> entry : externals.entrySet()) {
+				if (entry.getValue() == null) {
+					tagCompoundExternals.setString(entry.getKey(), "");
+				} else {
+					tagCompoundExternals.setTag(entry.getKey(), entry.getValue());
+				}
+			}
+			tag.setTag("externals", tagCompoundExternals);
 		}
 	}
 	
@@ -416,7 +441,7 @@ public class JumpBlock {
 	private static Object NetworkManager_instance;
 	private static Method NetworkManager_updateTileEntityField;
 	
-	public static void NetworkHelper_init() {
+	private static void NetworkHelper_init() {
 		try {
 			NetworkManager_updateTileEntityField = Class.forName("ic2.core.network.NetworkManager").getMethod("updateTileEntityField", new Class[] { TileEntity.class, String.class });
 			
@@ -432,7 +457,7 @@ public class JumpBlock {
 		}
 	}
 	
-	public static void NetworkHelper_updateTileEntityField(TileEntity tileEntity, String field) {
+	private static void NetworkHelper_updateTileEntityField(TileEntity tileEntity, String field) {
 		try {
 			if (NetworkManager_instance == null) {
 				NetworkHelper_init();
@@ -446,6 +471,8 @@ public class JumpBlock {
 	
 	// This code is a straight copy from Vanilla net.minecraft.world.World.setBlock to remove lighting computations
 	public static boolean setBlockNoLight(World w, int x, int y, int z, Block block, int blockMeta, int par6) {
+		// return w.setBlock(x, y, z, block, blockMeta, par6);
+		
 		if (x >= -30000000 && z >= -30000000 && x < 30000000 && z < 30000000) {
 			if (y < 0) {
 				return false;
@@ -490,10 +517,11 @@ public class JumpBlock {
 		} else {
 			return false;
 		}
+		/**/
 	}
 	
 	// This code is a straight copy from Vanilla net.minecraft.world.Chunk.func_150807_a to remove lighting computations
-	public static boolean myChunkSBIDWMT(Chunk c, int x, int y, int z, Block block, int blockMeta) {
+	private static boolean myChunkSBIDWMT(Chunk c, int x, int y, int z, Block block, int blockMeta) {
 		int i1 = z << 4 | x;
 		
 		if (y >= c.precipitationHeightMap[i1] - 1) {

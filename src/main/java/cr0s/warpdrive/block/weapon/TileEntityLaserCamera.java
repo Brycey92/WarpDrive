@@ -4,6 +4,9 @@ import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.ChunkPosition;
 import cpw.mods.fml.common.Optional;
@@ -12,7 +15,7 @@ import cr0s.warpdrive.api.IVideoChannel;
 import cr0s.warpdrive.block.TileEntityLaser;
 import cr0s.warpdrive.config.WarpDriveConfig;
 import cr0s.warpdrive.data.CameraRegistryItem;
-import cr0s.warpdrive.data.CameraType;
+import cr0s.warpdrive.data.EnumCameraType;
 import cr0s.warpdrive.network.PacketHandler;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
@@ -23,8 +26,8 @@ public class TileEntityLaserCamera extends TileEntityLaser implements IVideoChan
 	private final static int REGISTRY_UPDATE_INTERVAL_TICKS = 15 * 20;
 	private final static int PACKET_SEND_INTERVAL_TICKS = 60 * 20;
 	
+	private int packetSendTicks = 10;
 	private int registryUpdateTicks = 20;
-	private int packetSendTicks = 20;
 	
 	public TileEntityLaserCamera() {
 		super();
@@ -50,7 +53,10 @@ public class TileEntityLaserCamera extends TileEntityLaser implements IVideoChan
 			registryUpdateTicks--;
 			if (registryUpdateTicks <= 0) {
 				registryUpdateTicks = REGISTRY_UPDATE_INTERVAL_TICKS;
-				WarpDrive.instance.cameras.updateInRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord), videoChannel, CameraType.LASER_CAMERA);
+				if (WarpDriveConfig.LOGGING_VIDEO_CHANNEL) {
+					WarpDrive.logger.info(this + " Updating registry (" + videoChannel + ")");
+				}
+				WarpDrive.cameras.updateInRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord), videoChannel, EnumCameraType.LASER_CAMERA);
 			}
 		}
 	}
@@ -63,44 +69,47 @@ public class TileEntityLaserCamera extends TileEntityLaser implements IVideoChan
 	@Override
 	public void setVideoChannel(int parVideoChannel) {
 		if (videoChannel != parVideoChannel) {
+			videoChannel = parVideoChannel;
+			markDirty();
 			if (WarpDriveConfig.LOGGING_VIDEO_CHANNEL) {
 				WarpDrive.logger.info(this + " Video channel updated from " + videoChannel + " to " + parVideoChannel);
 			}
-			videoChannel = parVideoChannel;
 			// force update through main thread since CC runs on server as 'client'
 			packetSendTicks = 0;
 			registryUpdateTicks = 0;
 		}
 	}
 	
-	public String getVideoChannelStatus() {
-		if (videoChannel < 0) {
-			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid",
-					videoChannel );
+	private String getVideoChannelStatus() {
+		if (videoChannel == -1) {
+			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.undefined");
+		} else if (videoChannel < 0) {
+			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid", videoChannel);
 		} else {
-			CameraRegistryItem camera = WarpDrive.instance.cameras.getCameraByVideoChannel(worldObj, videoChannel);
+			CameraRegistryItem camera = WarpDrive.cameras.getCameraByVideoChannel(worldObj, videoChannel);
 			if (camera == null) {
-				WarpDrive.instance.cameras.printRegistry(worldObj);
-				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid",
-						videoChannel );
+				WarpDrive.cameras.printRegistry(worldObj);
+				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid", videoChannel);
 			} else if (camera.isTileEntity(this)) {
-				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.valid",
-						videoChannel );
+				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.valid", videoChannel);
 			} else {
 				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.validCamera",
 						videoChannel,
 						camera.position.chunkPosX,
 						camera.position.chunkPosY,
-						camera.position.chunkPosZ );
+						camera.position.chunkPosZ);
 			}
 		}
 	}
 	
 	@Override
 	public String getStatus() {
-		return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-				getBlockType().getLocalizedName())
-				+ (worldObj.isRemote ? getVideoChannelStatus() : getBeamFrequencyStatus());
+		if (worldObj == null || worldObj.isRemote) {
+			return super.getStatus()
+			       + "\n" + getVideoChannelStatus();
+		} else {
+			return super.getStatus();
+		}
 	}
 	
 	@Override
@@ -116,14 +125,29 @@ public class TileEntityLaserCamera extends TileEntityLaser implements IVideoChan
 	}
 	
 	@Override
+	public Packet getDescriptionPacket() {
+		NBTTagCompound tagCompound = new NBTTagCompound();
+		// (beam frequency is server side only)
+		tagCompound.setInteger("videoChannel", videoChannel);
+		return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, tagCompound);
+	}
+	
+	@Override
+	public void onDataPacket(NetworkManager networkManager, S35PacketUpdateTileEntity packet) {
+		NBTTagCompound tagCompound = packet.func_148857_g();
+		// (beam frequency is server side only)
+		setVideoChannel(tagCompound.getInteger("videoChannel"));
+	}
+	
+	@Override
 	public void invalidate() {
-		WarpDrive.instance.cameras.removeFromRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord));
+		WarpDrive.cameras.removeFromRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord));
 		super.invalidate();
 	}
 	
 	@Override
 	public void onChunkUnload() {
-		WarpDrive.instance.cameras.removeFromRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord));
+		WarpDrive.cameras.removeFromRegistry(worldObj, new ChunkPosition(xCoord, yCoord, zCoord));
 		super.onChunkUnload();
 	}
 	
@@ -155,7 +179,7 @@ public class TileEntityLaserCamera extends TileEntityLaser implements IVideoChan
 	
 	@Override
 	public String toString() {
-		return String.format("%s Beam \'%d\' Camera \'%d\' @ \'%s\' (%d %d %d)", new Object[] { getClass().getSimpleName(),
-				beamFrequency, videoChannel, worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(), xCoord, yCoord, zCoord });
+		return String.format("%s Beam \'%d\' Camera \'%d\' @ \'%s\' (%d %d %d)", getClass().getSimpleName(),
+			beamFrequency, videoChannel, worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(), xCoord, yCoord, zCoord);
 	}
 }

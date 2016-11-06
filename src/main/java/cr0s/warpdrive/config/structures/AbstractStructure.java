@@ -11,17 +11,17 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import cr0s.warpdrive.config.InvalidXmlException;
-import cr0s.warpdrive.config.XmlRepresentable;
+import cr0s.warpdrive.config.IXmlRepresentable;
 import net.minecraft.world.gen.feature.WorldGenerator;
 
 /**
  * @author Francesco, LemADEC
  *
  */
-public abstract class AbstractStructure extends WorldGenerator implements XmlRepresentable {
+public abstract class AbstractStructure extends WorldGenerator implements IXmlRepresentable {
 	protected String group;
 	protected String name;
-	protected HashMap<String,String> variables = new HashMap<String,String>();
+	protected HashMap<String,String> variables = new HashMap<>();
 	
 	public AbstractStructure(final String group, final String name) {
 		this.group = group;

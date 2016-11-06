@@ -13,31 +13,30 @@ import java.util.logging.Logger;
 import cr0s.warpdrive.WarpDrive;
 
 public final class JumpgatesRegistry {
-    private File db;
-    private ArrayList<Jumpgate> gates = new ArrayList<Jumpgate>();
-
-    //@SideOnly(Side.CLIENT)
+    private File file;
+    private ArrayList<Jumpgate> gates = new ArrayList<>();
+    
     public JumpgatesRegistry() {
-        db = new File("gates.txt");
-        WarpDrive.logger.info("Opening gates file '" + db + "'");
+        file = new File("gates.txt");
+        WarpDrive.logger.info("Opening gates file '" + file + "'");
         
-        if (db != null && !db.exists()) {
+        if (file != null && !file.exists()) {
         	try {
-				db.createNewFile();
-			} catch (IOException e) {
-				e.printStackTrace();
+				file.createNewFile();
+			} catch (IOException exception) {
+				exception.printStackTrace();
 			}
         }
         
         try {
             loadGates();
-        } catch (IOException ex) {
-            Logger.getLogger(JumpgatesRegistry.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException exception) {
+            Logger.getLogger(JumpgatesRegistry.class.getName()).log(Level.SEVERE, null, exception);
         }
     }
-
+    
     public void saveGates() throws IOException {
-        PrintWriter out = new PrintWriter(new FileWriter(db));
+        PrintWriter out = new PrintWriter(new FileWriter(file));
 
         // Write each string in the array on a separate line
         for (Jumpgate jg : gates) {
@@ -46,11 +45,11 @@ public final class JumpgatesRegistry {
 
         out.close();
     }
-
+    
     public void loadGates() throws IOException {
     	WarpDrive.logger.info("Loading jump gates from gates.txt...");
         BufferedReader bufferedreader;
-        bufferedreader = new BufferedReader(new FileReader(db));
+        bufferedreader = new BufferedReader(new FileReader(file));
         String s1;
 
         while ((s1 = bufferedreader.readLine()) != null) {
@@ -60,11 +59,11 @@ public final class JumpgatesRegistry {
         bufferedreader.close();
         WarpDrive.logger.info("Loaded " + gates.size() + " jump gates.");
     }
-
+    
     public void addGate(Jumpgate jg) {
         gates.add(jg);
     }
-
+    
     public boolean addGate(String name, int x, int y, int z) {
         // Gate already exists
         if (findGateByName(name) != null) {
@@ -81,7 +80,7 @@ public final class JumpgatesRegistry {
 
         return true;
     }
-
+    
     public void removeGate(String name) {
         Jumpgate jg;
 
@@ -101,7 +100,7 @@ public final class JumpgatesRegistry {
             Logger.getLogger(JumpgatesRegistry.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+    
     public Jumpgate findGateByName(String name) {
         for (Jumpgate jg : gates) {
             if (jg.name.equalsIgnoreCase(name)) {
@@ -111,7 +110,7 @@ public final class JumpgatesRegistry {
 
         return null;
     }
-
+    
     public String JumpgatesList() {
         String result = "";
 
@@ -133,12 +132,11 @@ public final class JumpgatesRegistry {
     	}
     	return result;
     }
-
+    
     public Jumpgate findNearestGate(int x, int y, int z) {
-//    	WarpDrive.debugPrint(JumpgatesList());
         double minDistance2 = -1;
         Jumpgate res = null;
-
+        
         for (Jumpgate jg : gates) {
             double dX = jg.xCoord - x;
             double dY = jg.yCoord - y;
@@ -150,7 +148,7 @@ public final class JumpgatesRegistry {
                 res = jg;
             }
         }
-
+        
         return res;
     }
 }

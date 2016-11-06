@@ -49,7 +49,7 @@ public class CompatArsMagica2 implements IBlockTransformer {
 	}
 	
 	@Override
-	public boolean isJumpReady(final TileEntity tileEntity) {
+	public boolean isJumpReady(final Block block, final int metadata, final TileEntity tileEntity, StringBuilder reason) {
 		return true;
 	}
 	
@@ -57,8 +57,7 @@ public class CompatArsMagica2 implements IBlockTransformer {
 	@Optional.Method(modid = "arsmagica2")
 	public NBTBase saveExternals(final TileEntity tileEntity) {
 		if (tileEntity instanceof IPowerNode) {
-			NBTBase nbtArsMagica2 = PowerNodeRegistry.For(tileEntity.getWorldObj()).getDataCompoundForNode((IPowerNode) tileEntity);
-			return nbtArsMagica2;
+			return PowerNodeRegistry.For(tileEntity.getWorldObj()).getDataCompoundForNode((IPowerNode) tileEntity);
 		}
 		return null;
 	}

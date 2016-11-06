@@ -4,6 +4,9 @@ import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.NetworkManager;
+import net.minecraft.network.Packet;
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.util.StatCollector;
 import cpw.mods.fml.common.Optional;
 import cr0s.warpdrive.WarpDrive;
@@ -19,7 +22,7 @@ public class TileEntityMonitor extends TileEntityAbstractInterfaced implements I
 	private int videoChannel = -1;
 	
 	private final static int PACKET_SEND_INTERVAL_TICKS = 60 * 20;
-	private int packetSendTicks = 20;
+	private int packetSendTicks = 10;
 	
 	public TileEntityMonitor() {
 		super();
@@ -40,8 +43,6 @@ public class TileEntityMonitor extends TileEntityAbstractInterfaced implements I
 				packetSendTicks = PACKET_SEND_INTERVAL_TICKS;
 				PacketHandler.sendVideoChannelPacket(worldObj.provider.dimensionId, xCoord, yCoord, zCoord, videoChannel);
 			}
-			
-			return;
 		}
 	}
 	
@@ -59,35 +60,34 @@ public class TileEntityMonitor extends TileEntityAbstractInterfaced implements I
 			}
 			// force update through main thread since CC runs on server as 'client'
 			packetSendTicks = 0;
+			markDirty();
 		}
 	}
 	
-	public String getVideoChannelStatus() {
-		if (videoChannel < 0) {
-			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid",
-					videoChannel );
+	private String getVideoChannelStatus() {
+		if (videoChannel == -1) {
+			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.undefined");
+		} else if (videoChannel < 0) {
+			return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalid", videoChannel);
 		} else {
-			CameraRegistryItem camera = WarpDrive.instance.cameras.getCameraByVideoChannel(worldObj, videoChannel);
+			CameraRegistryItem camera = WarpDrive.cameras.getCameraByVideoChannel(worldObj, videoChannel);
 			if (camera == null) {
-				WarpDrive.instance.cameras.printRegistry(worldObj);
-				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalidOrNotLoaded",
-						videoChannel );
+				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.invalidOrNotLoaded", videoChannel);
 			} else if (camera.isTileEntity(this)) {
-				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.valid",
-						videoChannel );
+				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.valid", videoChannel);
 			} else {
 				return StatCollector.translateToLocalFormatted("warpdrive.videoChannel.statusLine.validCamera",
 						videoChannel,
 						camera.position.chunkPosX,
 						camera.position.chunkPosY,
-						camera.position.chunkPosZ );
+						camera.position.chunkPosZ);
 			}
 		}
 	}
 	
+	@Override
 	public String getStatus() {
-		return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-					getBlockType().getLocalizedName())
+		return super.getStatus()
 				+ getVideoChannelStatus();
 	}
 	
@@ -101,6 +101,19 @@ public class TileEntityMonitor extends TileEntityAbstractInterfaced implements I
 	public void writeToNBT(NBTTagCompound tag) {
 		super.writeToNBT(tag);
 		tag.setInteger("videoChannel", videoChannel);
+	}
+	
+	@Override
+	public Packet getDescriptionPacket() {
+		NBTTagCompound tagCompound = new NBTTagCompound();
+		writeToNBT(tagCompound);
+		return new S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 10, tagCompound);
+	}
+	
+	@Override
+	public void onDataPacket(NetworkManager networkManager, S35PacketUpdateTileEntity packet) {
+		NBTTagCompound tagCompound = packet.func_148857_g();
+		readFromNBT(tagCompound);
 	}
 	
 	// OpenComputer callback methods

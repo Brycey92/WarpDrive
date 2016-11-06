@@ -13,12 +13,12 @@ import org.w3c.dom.NodeList;
 import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.config.InvalidXmlException;
 import cr0s.warpdrive.config.RandomCollection;
-import cr0s.warpdrive.config.XmlRepresentable;
+import cr0s.warpdrive.config.IXmlRepresentable;
 
 /**
  * Represents a set of fillers.
  **/
-public class FillerSet implements XmlRepresentable, Comparable {
+public class FillerSet implements IXmlRepresentable, Comparable {
 	protected String group;
 	protected String name;
 	private RandomCollection<Filler> fillers;
@@ -37,9 +37,9 @@ public class FillerSet implements XmlRepresentable, Comparable {
 	public FillerSet(final String group, final String name) {
 		this.group = group;
 		this.name = name;
-		fillers = new RandomCollection<Filler>();
-		importGroupNames = new ArrayList<String>();
-		importGroups = new ArrayList<String>();
+		fillers = new RandomCollection<>();
+		importGroupNames = new ArrayList<>();
+		importGroups = new ArrayList<>();
 	}
 	
 	public boolean isEmpty() {

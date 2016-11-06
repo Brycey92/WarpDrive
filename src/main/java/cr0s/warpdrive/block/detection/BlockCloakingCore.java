@@ -3,27 +3,25 @@ package cr0s.warpdrive.block.detection;
 import java.util.Random;
 
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import cr0s.warpdrive.WarpDrive;
+import cr0s.warpdrive.block.BlockAbstractContainer;
 
-public class BlockCloakingCore extends BlockContainer {
+public class BlockCloakingCore extends BlockAbstractContainer {
 	private IIcon[] iconBuffer;
 	
 	public BlockCloakingCore() {
-		super(Material.rock);
-		setHardness(0.5F);
-		setStepSound(Block.soundTypeMetal);
-		setCreativeTab(WarpDrive.creativeTabWarpDrive);
-		this.setBlockName("warpdrive.detection.CloakingCore");
+		super(Material.iron);
+		setBlockName("warpdrive.detection.CloakingCore");
 	}
 	
 	@Override
@@ -59,6 +57,11 @@ public class BlockCloakingCore extends BlockContainer {
 	@Override
 	public int quantityDropped(Random par1Random) {
 		return 1;
+	}
+	
+	@Override
+	public byte getTier(final ItemStack itemStack) {
+		return 3;
 	}
 	
 	/**

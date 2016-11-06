@@ -4,6 +4,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockColored;
+import net.minecraft.item.EnumRarity;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemDye;
 import net.minecraft.item.ItemStack;
@@ -21,7 +22,7 @@ public class ItemBlockHull extends ItemBlock {
 	@Override
 	@SideOnly(Side.CLIENT)
 	public IIcon getIconFromDamage(int p_77617_1_) {
-		return this.field_150939_a.getIcon(2, BlockColored.func_150031_c(p_77617_1_));
+		return field_150939_a.getIcon(2, BlockColored.func_150031_c(p_77617_1_));
 	}
 	
 	@Override
@@ -29,20 +30,33 @@ public class ItemBlockHull extends ItemBlock {
 		return damage;
 	}
 	
-	/*
-	@Override
-	public void getSubItems(Item item, CreativeTabs creativeTabs, List list) {
-		for (DecorativeType decorativeType : DecorativeType.values()) {
-			list.add(new ItemStack(item, 1, decorativeType.ordinal()));
-		}
-	}
-	/**/
-	
 	@Override
 	public String getUnlocalizedName(ItemStack itemstack) {
-		if (itemstack == null) {
+		if (itemstack == null || field_150939_a instanceof BlockHullStairs) {
 			return getUnlocalizedName();
 		}
 		return getUnlocalizedName() + ItemDye.field_150923_a[BlockColored.func_150031_c(itemstack.getItemDamage())];
+	}
+	
+	private byte getTier() {
+		if (field_150939_a instanceof BlockHullGlass) {
+			return ((BlockHullGlass)field_150939_a).tier;
+		} else if (field_150939_a instanceof BlockHullPlain) {
+			return ((BlockHullPlain)field_150939_a).tier;
+		} else if (field_150939_a instanceof BlockHullStairs) {
+			return ((BlockHullStairs)field_150939_a).tier;
+		}
+		return 1;
+	}
+	
+	@Override
+	public EnumRarity getRarity(final ItemStack itemStack) {
+		switch (getTier()) {
+			case 0:	return EnumRarity.epic;
+			case 1:	return EnumRarity.common;
+			case 2:	return EnumRarity.uncommon;
+			case 3:	return EnumRarity.rare;
+			default: return EnumRarity.common;
+		}
 	}
 }

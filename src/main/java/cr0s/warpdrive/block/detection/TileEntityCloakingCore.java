@@ -30,8 +30,8 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 	final float[] innerCoilColor_b = { 0.25f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.50f, 1.00f, 1.00f, 1.00f, 1.00f, 0.75f }; 
 	
 	// Spatial cloaking field parameters
-	private final int innerCoilsDistance = 2; // Step length from core block to main coils
-	private int[] outerCoilsDistance = {0, 0, 0, 0, 0, 0};
+	private static final int innerCoilsDistance = 2; // Step length from core block to main coils
+	private final int[] outerCoilsDistance = {0, 0, 0, 0, 0, 0};
 	public int minX = 0;
 	public int minY = 0;
 	public int minZ = 0;
@@ -110,7 +110,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 						// Refresh the field
 						CloakedArea area = WarpDrive.cloaks.getCloakedArea(worldObj, xCoord, yCoord, zCoord);
 						if (area != null) {
-							area.sendCloakPacketToPlayersEx(false); // recloak field
+							area.sendCloakPacketToPlayersEx(false); // re-cloak field
 						} else {
 							if (WarpDriveConfig.LOGGING_CLOAKING) {
 								WarpDrive.logger.info("getCloakedArea1 returned null for " + worldObj + " " + xCoord + "," + yCoord + "," + zCoord);
@@ -124,7 +124,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 						if (WarpDriveConfig.LOGGING_CLOAKING) {
 							WarpDrive.logger.info(this + " Coil(s) lost, cloak field is collapsing...");
 						}
-						consumeAllEnergy();
+						energy_consume(energy_getEnergyStored());
 						disableCloakingField();				
 					} else {// enabled, cloaking and valid
 						if (hasEnoughPower) {// enabled, cloaking and able to
@@ -132,7 +132,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 							// Refresh the field (workaround to re-synchronize players since client may 'eat up' the packets)
 							CloakedArea area = WarpDrive.cloaks.getCloakedArea(worldObj, xCoord, yCoord, zCoord);
 							if (area != null) {
-								area.sendCloakPacketToPlayersEx(false); // recloak field
+								area.sendCloakPacketToPlayersEx(false); // re-cloak field
 							} else {
 								if (WarpDriveConfig.LOGGING_CLOAKING) {
 									WarpDrive.logger.info("getCloakedArea2 returned null for " + worldObj + " " + xCoord + "," + yCoord + "," + zCoord);
@@ -252,7 +252,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 	}
 	
 	public boolean countBlocksAndConsumeEnergy() {
-		int x, y, z, energyToConsume = 0;
+		int x, y, z, energyToConsume;
 		volume = 0;
 		if (tier == 1) {// tier1 = gaz and air blocks don't count
 			for (y = minY; y <= maxY; y++) {
@@ -279,14 +279,14 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 		}
 		
 		// WarpDrive.logger.info(this + " Consuming " + energyToConsume + " EU for " + blocksCount + " blocks");
-		return consumeEnergy(energyToConsume, false);
+		return energy_consume(energyToConsume, false);
 	}
 	
 	@Override
 	public void readFromNBT(NBTTagCompound tag) {
 		super.readFromNBT(tag);
-		this.tier = tag.getByte("tier");
-		this.isEnabled = tag.getBoolean("enabled");
+		tier = tag.getByte("tier");
+		isEnabled = tag.getBoolean("enabled");
 	}
 	
 	@Override
@@ -341,7 +341,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 			if (newCoilDistance <= 0) {
 				outerCoilsDistance[direction.ordinal()] = 0;
 				if (WarpDriveConfig.LOGGING_CLOAKING) {
-					WarpDrive.logger.info("Invalid outercoil assembly at " + direction);
+					WarpDrive.logger.info("Invalid outer coil assembly at " + direction);
 				}
 				return false;
 			}
@@ -349,18 +349,22 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 		}
 		
 		// Update cloaking field parameters defined by coils		
-		minX =               xCoord - outerCoilsDistance[0] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
-		maxX =               xCoord + outerCoilsDistance[1] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
-		minY = Math.max(  0, yCoord - outerCoilsDistance[2] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS);
-		maxY = Math.min(255, yCoord + outerCoilsDistance[3] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS);
-		minZ =               zCoord - outerCoilsDistance[4] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
-		maxZ =               zCoord + outerCoilsDistance[5] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
+		minX =               xCoord - outerCoilsDistance[4] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
+		maxX =               xCoord + outerCoilsDistance[5] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
+		minY = Math.max(  0, yCoord - outerCoilsDistance[0] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS);
+		maxY = Math.min(255, yCoord + outerCoilsDistance[1] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS);
+		minZ =               zCoord - outerCoilsDistance[2] - WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
+		maxZ =               zCoord + outerCoilsDistance[3] + WarpDriveConfig.CLOAKING_COIL_CAPTURE_BLOCKS;
 		return true;
 	}
 	
 	@Override
 	public String getStatus() {
-		String unlocalizedStatus = "warpdrive.cloakingCore.invalidAssembly";
+		if (worldObj == null) {
+			return super.getStatus();
+		}
+		
+		String unlocalizedStatus;
 		if (!isValid) {
 			unlocalizedStatus = "warpdrive.cloakingCore.invalidAssembly";
 		} else if (!isEnabled) {
@@ -370,11 +374,10 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 		} else {
 			unlocalizedStatus = "warpdrive.cloakingCore.cloaking";
 		}
-		return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-				getBlockType().getLocalizedName())
-				+ StatCollector.translateToLocalFormatted(unlocalizedStatus,
-						tier,
-						volume);
+		return super.getStatus()
+		    + "\n" + StatCollector.translateToLocalFormatted(unlocalizedStatus,
+				tier,
+				volume);
 	}
 	
 	// OpenComputer callback methods
@@ -387,6 +390,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 			} else {
 				tier = 1;
 			}
+			markDirty();
 		}
 		return new Integer[] { (int)tier };
 	}
@@ -394,7 +398,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] isAssemblyValid(Context context, Arguments arguments) {
-		return new Object[] { (boolean)validateAssembly() };
+		return new Object[] { validateAssembly() };
 	}
 	
 	@Callback
@@ -402,6 +406,7 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 	public Object[] enable(Context context, Arguments arguments) {
 		if (arguments.count() == 1) {
 			isEnabled = arguments.checkBoolean(0);
+			markDirty();
 		}
 		return new Object[] { isEnabled };
 	}
@@ -412,36 +417,39 @@ public class TileEntityCloakingCore extends TileEntityAbstractEnergy {
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
 		
-		if (methodName.equals("tier")) {
-			if (arguments.length == 1) {
-				if (toInt(arguments[0]) == 2) {
-					tier = 2;
-				} else {
-					tier = 1;
+		switch (methodName) {
+			case "tier":
+				if (arguments.length == 1) {
+					if (toInt(arguments[0]) == 2) {
+						tier = 2;
+					} else {
+						tier = 1;
+					}
+					markDirty();
 				}
-			}
-			return new Integer[] { (int)tier };
-			
-		} else if (methodName.equals("isAssemblyValid")) {
-			return new Object[] { (boolean)validateAssembly() };
-			
-		} else if (methodName.equals("enable")) {
-			if (arguments.length == 1) {
-				isEnabled = toBool(arguments[0]);
-			}
-			return new Object[] { isEnabled };
+				return new Integer[] { (int) tier };
+
+			case "isAssemblyValid":
+				return new Object[] { validateAssembly() };
+
+			case "enable":
+				if (arguments.length == 1) {
+					isEnabled = toBool(arguments[0]);
+					markDirty();
+				}
+				return new Object[] { isEnabled };
 		}
 		
 		return super.callMethod(computer, context, method, arguments);
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.CLOAKING_MAX_ENERGY_STORED;
 	}
 	
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		return true;
 	}
 }

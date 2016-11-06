@@ -2,13 +2,22 @@ package cr0s.warpdrive;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 
+import com.mojang.authlib.GameProfile;
+import cr0s.warpdrive.block.*;
+import cr0s.warpdrive.block.detection.*;
+import cr0s.warpdrive.block.forcefield.*;
+import cr0s.warpdrive.block.hull.BlockHullStairs;
+import cr0s.warpdrive.item.*;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockColored;
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemArmor.ArmorMaterial;
+import net.minecraft.item.ItemDye;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
@@ -38,31 +47,13 @@ import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
 import cpw.mods.fml.common.event.FMLServerStartingEvent;
 import cpw.mods.fml.common.registry.GameRegistry;
-import cr0s.warpdrive.block.BlockAirGenerator;
-import cr0s.warpdrive.block.BlockChunkLoader;
-import cr0s.warpdrive.block.BlockLaser;
-import cr0s.warpdrive.block.BlockLaserMedium;
-import cr0s.warpdrive.block.TileEntityAbstractChunkLoading;
-import cr0s.warpdrive.block.TileEntityAirGenerator;
-import cr0s.warpdrive.block.TileEntityChunkLoader;
-import cr0s.warpdrive.block.TileEntityLaser;
-import cr0s.warpdrive.block.TileEntityLaserMedium;
+
 import cr0s.warpdrive.block.building.BlockShipScanner;
 import cr0s.warpdrive.block.building.TileEntityShipScanner;
 import cr0s.warpdrive.block.collection.BlockLaserTreeFarm;
 import cr0s.warpdrive.block.collection.BlockMiningLaser;
 import cr0s.warpdrive.block.collection.TileEntityLaserTreeFarm;
 import cr0s.warpdrive.block.collection.TileEntityMiningLaser;
-import cr0s.warpdrive.block.detection.BlockCamera;
-import cr0s.warpdrive.block.detection.BlockCloakingCoil;
-import cr0s.warpdrive.block.detection.BlockCloakingCore;
-import cr0s.warpdrive.block.detection.BlockMonitor;
-import cr0s.warpdrive.block.detection.BlockRadar;
-import cr0s.warpdrive.block.detection.BlockWarpIsolation;
-import cr0s.warpdrive.block.detection.TileEntityCamera;
-import cr0s.warpdrive.block.detection.TileEntityCloakingCore;
-import cr0s.warpdrive.block.detection.TileEntityMonitor;
-import cr0s.warpdrive.block.detection.TileEntityRadar;
 import cr0s.warpdrive.block.energy.BlockEnanReactorCore;
 import cr0s.warpdrive.block.energy.BlockEnanReactorLaser;
 import cr0s.warpdrive.block.energy.BlockEnergyBank;
@@ -90,7 +81,9 @@ import cr0s.warpdrive.block.passive.BlockIridium;
 import cr0s.warpdrive.block.passive.BlockTransportBeacon;
 import cr0s.warpdrive.block.passive.ItemBlockDecorative;
 import cr0s.warpdrive.block.weapon.BlockLaserCamera;
+import cr0s.warpdrive.block.weapon.BlockWeaponController;
 import cr0s.warpdrive.block.weapon.TileEntityLaserCamera;
+import cr0s.warpdrive.block.weapon.TileEntityWeaponController;
 import cr0s.warpdrive.command.CommandDebug;
 import cr0s.warpdrive.command.CommandEntity;
 import cr0s.warpdrive.command.CommandGenerate;
@@ -106,14 +99,9 @@ import cr0s.warpdrive.data.StarMapRegistry;
 import cr0s.warpdrive.event.ClientHandler;
 import cr0s.warpdrive.event.LivingHandler;
 import cr0s.warpdrive.event.WorldHandler;
-import cr0s.warpdrive.item.ItemAirCanisterFull;
-import cr0s.warpdrive.item.ItemComponent;
-import cr0s.warpdrive.item.ItemHelmet;
-import cr0s.warpdrive.item.ItemIC2reactorLaserFocus;
-import cr0s.warpdrive.item.ItemUpgrade;
-import cr0s.warpdrive.item.ItemTuningFork;
 import cr0s.warpdrive.network.PacketHandler;
 import cr0s.warpdrive.render.ClientCameraHandler;
+import cr0s.warpdrive.render.RenderBlockForceField;
 import cr0s.warpdrive.render.RenderBlockStandard;
 import cr0s.warpdrive.render.RenderOverlayCamera;
 import cr0s.warpdrive.world.BiomeSpace;
@@ -124,14 +112,12 @@ import cr0s.warpdrive.world.SpaceWorldGenerator;
 
 @Mod(modid = WarpDrive.MODID, name = "WarpDrive", version = WarpDrive.VERSION, dependencies = "after:IC2API;" + " after:CoFHCore;" + " after:ComputerCraft;"
 		+ " after:OpenComputer;" + " after:CCTurtle;" + " after:gregtech;" + " after:AppliedEnergistics;" + " after:EnderIO;")
-/**
- * @author Cr0s
- */
 public class WarpDrive implements LoadingCallback {
 	public static final String MODID = "WarpDrive";
 	public static final String VERSION = "@version@";
 	public static final boolean isDev = VERSION.equals("@" + "version" + "@") || VERSION.contains("-dev");
-	
+	public static GameProfile gameProfile = new GameProfile(UUID.nameUUIDFromBytes("[WarpDrive]".getBytes()), "[WarpDrive]");
+
 	public static Block blockShipCore;
 	public static Block blockShipController;
 	public static Block blockRadar;
@@ -139,6 +125,7 @@ public class WarpDrive implements LoadingCallback {
 	public static Block blockAirGenerator;
 	public static Block blockLaser;
 	public static Block blockLaserCamera;
+	public static Block blockWeaponController;
 	public static Block blockCamera;
 	public static Block blockMonitor;
 	public static Block blockLaserMedium;
@@ -159,29 +146,45 @@ public class WarpDrive implements LoadingCallback {
 	public static Block blockHighlyAdvancedMachine;
 	public static Block blockTransportBeacon;
 	public static Block blockChunkLoader;
+	public static Block[] blockForceFields;
+	public static Block[] blockForceFieldProjectors;
+	public static Block[] blockForceFieldRelays;
 	public static BlockDecorative blockDecorative;
 	public static Block[] blockHulls_plain;
 	public static Block[] blockHulls_glass;
-	public static Block[] blockHulls_stair;
-	public static Block[] blockHulls_slab;
+	public static Block[][] blockHulls_stairs;
+	public static Block[][] blockHulls_slab;
+	public static Block blockSiren;
 	
 	public static Item itemIC2reactorLaserFocus;
 	public static ItemComponent itemComponent;
+	public static ItemCrystalToken itemCrystalToken;
 	public static ItemUpgrade itemUpgrade;
 	public static ItemTuningFork itemTuningRod;
+	public static ItemForceFieldShape itemForceFieldShape;
+	public static ItemForceFieldUpgrade itemForceFieldUpgrade;
 	
-	public static ArmorMaterial armorMaterial = EnumHelper.addArmorMaterial("WARP", 18, new int[] { 2, 6, 5, 2 }, 9);
+	public static final ArmorMaterial armorMaterial = EnumHelper.addArmorMaterial("WARP", 18, new int[] { 2, 6, 5, 2 }, 9);
 	public static ItemHelmet itemHelmet;
 	public static ItemAirCanisterFull itemAirCanisterFull;
 	
+	public static DamageAsphyxia damageAsphyxia;
+	public static DamageCold damageCold;
+	public static DamageLaser damageLaser;
+	public static DamageShock damageShock;
+	public static DamageTeleportation damageTeleportation;
+	public static DamageWarm damageWarm;
+	
 	public static BiomeGenBase spaceBiome;
-	public SpaceWorldGenerator spaceWorldGenerator;
-	public HyperSpaceWorldGenerator hyperSpaceWorldGenerator;
+	@SuppressWarnings("FieldCanBeLocal")
+	private SpaceWorldGenerator spaceWorldGenerator;
+	@SuppressWarnings("FieldCanBeLocal")
+	private HyperSpaceWorldGenerator hyperSpaceWorldGenerator;
 	
 	public static Field fieldBlockHardness = null;
 	
 	// Client settings
-	public static CreativeTabs creativeTabWarpDrive = new CreativeTabWarpDrive("WarpDrive", "WarpDrive").setBackgroundImageName("warpdrive:creativeTab");
+	public static final CreativeTabs creativeTabWarpDrive = new CreativeTabWarpDrive("WarpDrive", "WarpDrive").setBackgroundImageName("warpdrive:creativeTab");
 	
 	@Instance(WarpDrive.MODID)
 	public static WarpDrive instance;
@@ -193,7 +196,8 @@ public class WarpDrive implements LoadingCallback {
 	public static CloakManager cloaks;
 	public static CamerasRegistry cameras;
 	
-	public static WarpDrivePeripheralHandler peripheralHandler = null;
+	@SuppressWarnings("FieldCanBeLocal")
+	private static WarpDrivePeripheralHandler peripheralHandler = null;
 	
 	public static Logger logger;
 	
@@ -210,6 +214,9 @@ public class WarpDrive implements LoadingCallback {
 			
 			RenderBlockStandard.renderId = RenderingRegistry.getNextAvailableRenderId();
 			RenderingRegistry.registerBlockHandler(RenderBlockStandard.instance);
+			
+			RenderBlockForceField.renderId = RenderingRegistry.getNextAvailableRenderId();
+			RenderingRegistry.registerBlockHandler(RenderBlockForceField.instance);
 		}
 	}
 	
@@ -225,153 +232,187 @@ public class WarpDrive implements LoadingCallback {
 		// CORE CONTROLLER
 		blockShipController = new BlockShipController();
 		
-		GameRegistry.registerBlock(blockShipController, "blockShipController");
+		GameRegistry.registerBlock(blockShipController, ItemBlockAbstractBase.class, "blockShipController");
 		GameRegistry.registerTileEntity(TileEntityShipController.class, MODID + ":blockShipController");
 		
-		// WARP CORE
+		// SHIP CORE
 		blockShipCore = new BlockShipCore();
 		
-		GameRegistry.registerBlock(blockShipCore, "blockShipCore");
+		GameRegistry.registerBlock(blockShipCore, ItemBlockAbstractBase.class, "blockShipCore");
 		GameRegistry.registerTileEntity(TileEntityShipCore.class, MODID + ":blockShipCore");
 		
-		// WARP RADAR
+		// RADAR
 		blockRadar = new BlockRadar();
 		
-		GameRegistry.registerBlock(blockRadar, "blockRadar");
+		GameRegistry.registerBlock(blockRadar, ItemBlockAbstractBase.class, "blockRadar");
 		GameRegistry.registerTileEntity(TileEntityRadar.class, MODID + ":blockRadar");
 		
 		// WARP ISOLATION
 		blockWarpIsolation = new BlockWarpIsolation();
 		
-		GameRegistry.registerBlock(blockWarpIsolation, "blockWarpIsolation");
+		GameRegistry.registerBlock(blockWarpIsolation, ItemBlockAbstractBase.class, "blockWarpIsolation");
 		
 		// AIR GENERATOR
 		blockAirGenerator = new BlockAirGenerator();
 		
-		GameRegistry.registerBlock(blockAirGenerator, "blockAirGenerator");
+		GameRegistry.registerBlock(blockAirGenerator, ItemBlockAbstractBase.class, "blockAirGenerator");
 		GameRegistry.registerTileEntity(TileEntityAirGenerator.class, MODID + ":blockAirGenerator");
 		
 		// AIR BLOCK
 		blockAir = new BlockAir();
 		
-		GameRegistry.registerBlock(blockAir, "blockAir");
+		GameRegistry.registerBlock(blockAir, ItemBlockAbstractBase.class, "blockAir");
 		
 		// GAS BLOCK
 		blockGas = new BlockGas();
 		
-		GameRegistry.registerBlock(blockGas, "blockGas");
+		GameRegistry.registerBlock(blockGas, ItemBlockAbstractBase.class, "blockGas");
 		
 		// LASER EMITTER
 		blockLaser = new BlockLaser();
 		
-		GameRegistry.registerBlock(blockLaser, "blockLaser");
+		GameRegistry.registerBlock(blockLaser, ItemBlockAbstractBase.class, "blockLaser");
 		GameRegistry.registerTileEntity(TileEntityLaser.class, MODID + ":blockLaser");
 		
 		// LASER EMITTER WITH CAMERA
 		blockLaserCamera = new BlockLaserCamera();
 		
-		GameRegistry.registerBlock(blockLaserCamera, "blockLaserCamera");
+		GameRegistry.registerBlock(blockLaserCamera, ItemBlockAbstractBase.class, "blockLaserCamera");
 		GameRegistry.registerTileEntity(TileEntityLaserCamera.class, MODID + ":blockLaserCamera");
+		
+		// LASER EMITTER WITH CAMERA
+		blockWeaponController = new BlockWeaponController();
+		
+		GameRegistry.registerBlock(blockWeaponController, ItemBlockAbstractBase.class, "blockWeaponController");
+		GameRegistry.registerTileEntity(TileEntityWeaponController.class, MODID + ":blockWeaponController");
 		
 		// CAMERA
 		blockCamera = new BlockCamera();
 		
-		GameRegistry.registerBlock(blockCamera, "blockCamera");
+		GameRegistry.registerBlock(blockCamera, ItemBlockAbstractBase.class, "blockCamera");
 		GameRegistry.registerTileEntity(TileEntityCamera.class, MODID + ":blockCamera");
 		
 		// MONITOR
 		blockMonitor = new BlockMonitor();
 		
-		GameRegistry.registerBlock(blockMonitor, "blockMonitor");
+		GameRegistry.registerBlock(blockMonitor, ItemBlockAbstractBase.class, "blockMonitor");
 		GameRegistry.registerTileEntity(TileEntityMonitor.class, MODID + ":blockMonitor");
 		
 		// MINING LASER
 		blockMiningLaser = new BlockMiningLaser();
 		
-		GameRegistry.registerBlock(blockMiningLaser, "blockMiningLaser");
+		GameRegistry.registerBlock(blockMiningLaser, ItemBlockAbstractBase.class, "blockMiningLaser");
 		GameRegistry.registerTileEntity(TileEntityMiningLaser.class, MODID + ":blockMiningLaser");
 		
 		// LASER TREE FARM
 		blockLaserTreeFarm = new BlockLaserTreeFarm();
 		
-		GameRegistry.registerBlock(blockLaserTreeFarm, "blockLaserTreeFarm");
+		GameRegistry.registerBlock(blockLaserTreeFarm, ItemBlockAbstractBase.class, "blockLaserTreeFarm");
 		GameRegistry.registerTileEntity(TileEntityLaserTreeFarm.class, MODID + ":blockLaserTreeFarm");
 		
 		// LASER MEDIUM
 		blockLaserMedium = new BlockLaserMedium();
 		
-		GameRegistry.registerBlock(blockLaserMedium, "blockLaserMedium");
+		GameRegistry.registerBlock(blockLaserMedium, ItemBlockAbstractBase.class, "blockLaserMedium");
 		GameRegistry.registerTileEntity(TileEntityLaserMedium.class, MODID + ":blockLaserMedium");
 		
 		// LIFT
 		blockLift = new BlockLift();
 		
-		GameRegistry.registerBlock(blockLift, "blockLift");
+		GameRegistry.registerBlock(blockLift, ItemBlockAbstractBase.class, "blockLift");
 		GameRegistry.registerTileEntity(TileEntityLift.class, MODID + ":blockLift");
 		
 		// IRIDIUM BLOCK
 		blockIridium = new BlockIridium();
 		
-		GameRegistry.registerBlock(blockIridium, "blockIridium");
+		GameRegistry.registerBlock(blockIridium, ItemBlockAbstractBase.class, "blockIridium");
 		
 		// HIGHLY ADVANCED MACHINE BLOCK
 		blockHighlyAdvancedMachine = new BlockHighlyAdvancedMachine();
 		
-		GameRegistry.registerBlock(blockHighlyAdvancedMachine, "blockHighlyAdvancedMachine");
+		GameRegistry.registerBlock(blockHighlyAdvancedMachine, ItemBlockAbstractBase.class, "blockHighlyAdvancedMachine");
 		
 		// SHIP SCANNER
 		blockShipScanner = new BlockShipScanner();
 		
-		GameRegistry.registerBlock(blockShipScanner, "blockShipScanner");
+		GameRegistry.registerBlock(blockShipScanner, ItemBlockAbstractBase.class, "blockShipScanner");
 		GameRegistry.registerTileEntity(TileEntityShipScanner.class, MODID + ":blockShipScanner");
 		
 		// CLOAKING DEVICE CORE
 		blockCloakingCore = new BlockCloakingCore();
 		
-		GameRegistry.registerBlock(blockCloakingCore, "blockCloakingCore");
+		GameRegistry.registerBlock(blockCloakingCore, ItemBlockAbstractBase.class, "blockCloakingCore");
 		GameRegistry.registerTileEntity(TileEntityCloakingCore.class, MODID + ":blockCloakingCore");
 		
 		// CLOAKING DEVICE COIL
 		blockCloakingCoil = new BlockCloakingCoil();
 		
-		GameRegistry.registerBlock(blockCloakingCoil, "blockCloakingCoil");
+		GameRegistry.registerBlock(blockCloakingCoil, ItemBlockAbstractBase.class, "blockCloakingCoil");
 		
 		// TRANSPORTER
 		blockTransporter = new BlockTransporter();
 		
-		GameRegistry.registerBlock(blockTransporter, "blockTransporter");
+		GameRegistry.registerBlock(blockTransporter, ItemBlockAbstractBase.class, "blockTransporter");
 		GameRegistry.registerTileEntity(TileEntityTransporter.class, MODID + ":blockTransporter");
 		
 		// IC2 REACTOR LASER MONITOR
 		if (WarpDriveConfig.isIndustrialCraft2Loaded) {
 			blockIC2reactorLaserMonitor = new BlockIC2reactorLaserMonitor();
 			
-			GameRegistry.registerBlock(blockIC2reactorLaserMonitor, "blockIC2reactorLaserMonitor");
+			GameRegistry.registerBlock(blockIC2reactorLaserMonitor, ItemBlockAbstractBase.class, "blockIC2reactorLaserMonitor");
 			GameRegistry.registerTileEntity(TileEntityIC2reactorLaserMonitor.class, MODID + ":blockIC2reactorLaserMonitor");
 		}
+		
 		// TRANSPORT BEACON
 		blockTransportBeacon = new BlockTransportBeacon();
 		
-		GameRegistry.registerBlock(blockTransportBeacon, "blockTransportBeacon");
+		GameRegistry.registerBlock(blockTransportBeacon, ItemBlockAbstractBase.class, "blockTransportBeacon");
 		
 		// POWER REACTOR, LASER, STORE
 		blockEnanReactorCore = new BlockEnanReactorCore();
-		GameRegistry.registerBlock(blockEnanReactorCore, "blockEnanReactorCore");
+		GameRegistry.registerBlock(blockEnanReactorCore, ItemBlockAbstractBase.class, "blockEnanReactorCore");
 		GameRegistry.registerTileEntity(TileEntityEnanReactorCore.class, MODID + ":blockEnanReactorCore");
 		
 		blockEnanReactorLaser = new BlockEnanReactorLaser();
-		GameRegistry.registerBlock(blockEnanReactorLaser, "blockEnanReactorLaser");
+		GameRegistry.registerBlock(blockEnanReactorLaser, ItemBlockAbstractBase.class, "blockEnanReactorLaser");
 		GameRegistry.registerTileEntity(TileEntityEnanReactorLaser.class, MODID + ":blockEnanReactorLaser");
 		
 		blockEnergyBank = new BlockEnergyBank();
-		GameRegistry.registerBlock(blockEnergyBank, "blockEnergyBank");
+		GameRegistry.registerBlock(blockEnergyBank, ItemBlockAbstractBase.class, "blockEnergyBank");
 		GameRegistry.registerTileEntity(TileEntityEnergyBank.class, MODID + ":blockEnergyBank");
 		
 		// CHUNK LOADER
 		blockChunkLoader = new BlockChunkLoader();
-		GameRegistry.registerBlock(blockChunkLoader, "blockChunkLoader");
+		GameRegistry.registerBlock(blockChunkLoader, ItemBlockAbstractBase.class, "blockChunkLoader");
 		GameRegistry.registerTileEntity(TileEntityChunkLoader.class, MODID + ":blockChunkLoader");
 		
+		// FORCE FIELD BLOCKS
+		blockForceFields = new Block[3];
+		blockForceFieldProjectors = new Block[3];
+		blockForceFieldRelays = new Block[3];
+		for(byte tier = 1; tier <= 3; tier++) {
+			int index = tier - 1;
+			// FORCE FIELD
+			blockForceFields[index] = new BlockForceField(tier);
+			GameRegistry.registerBlock(blockForceFields[index], ItemBlockAbstractBase.class, "blockForceField" + tier);
+			GameRegistry.registerTileEntity(TileEntityForceField.class, MODID + ":blockForceField" + tier);
+			
+			// FORCE FIELD PROJECTOR
+			blockForceFieldProjectors[index] = new BlockForceFieldProjector(tier);
+			GameRegistry.registerBlock(blockForceFieldProjectors[index], ItemBlockForceFieldProjector.class, "blockProjector" + tier);
+			GameRegistry.registerTileEntity(TileEntityForceFieldProjector.class, MODID + ":blockProjector" + tier);
+			
+			// FORCE FIELD RELAY
+			blockForceFieldRelays[index] = new BlockForceFieldRelay(tier);
+			GameRegistry.registerBlock(blockForceFieldRelays[index], ItemBlockForceFieldRelay.class, "blockForceFieldRelay" + tier);
+			GameRegistry.registerTileEntity(TileEntityForceFieldRelay.class, MODID + ":blockForceFieldRelay" + tier);
+		}
+		/* TODO
+		// SECURITY STATION
+		blockSecurityStation = new BlockSecurityStation();
+		GameRegistry.registerBlock(blockSecurityStation, ItemBlockAbstractBase.class, "blockSecurityStation");
+		GameRegistry.registerTileEntity(TileEntitySecurityStation.class, MODID + ":blockSecurityStation");
+		*/
 		// DECORATIVE
 		blockDecorative = new BlockDecorative();
 		GameRegistry.registerBlock(blockDecorative, ItemBlockDecorative.class, "blockDecorative");
@@ -379,16 +420,26 @@ public class WarpDrive implements LoadingCallback {
 		// HULL BLOCKS
 		blockHulls_plain = new Block[3];
 		blockHulls_glass = new Block[3];
-		blockHulls_stair = new Block[3 * 16];
-		blockHulls_slab = new Block[3 * 16];
+		blockHulls_stairs = new Block[3][16];
+		blockHulls_slab = new Block[3][16];
 		
-		for(int tier = 1; tier <= 3; tier++) {
+		for(byte tier = 1; tier <= 3; tier++) {
 			int index = tier - 1;
 			blockHulls_plain[index] = new BlockHullPlain(tier);
 			blockHulls_glass[index] = new BlockHullGlass(tier);
 			GameRegistry.registerBlock(blockHulls_plain[index], ItemBlockHull.class, "blockHull" + tier + "_plain");
 			GameRegistry.registerBlock(blockHulls_glass[index], ItemBlockHull.class, "blockHull" + tier + "_glass");
+			for (int woolColor = 0; woolColor <= 15; woolColor++) {
+				blockHulls_stairs[index][woolColor] = new BlockHullStairs(blockHulls_plain[index], woolColor, tier);
+				GameRegistry.registerBlock(blockHulls_stairs[index][woolColor], ItemBlockHull.class, "blockHull" + tier + "_stairs_" + ItemDye.field_150923_a[BlockColored.func_150031_c(woolColor)]);
+			}
 		}
+		
+		// SIRENS
+		blockSiren = new BlockSiren();
+		
+		GameRegistry.registerBlock(blockSiren, ItemBlockAbstractBase.class, "siren");
+		GameRegistry.registerTileEntity(TileEntitySiren.class, MODID + ":tileEntitySiren");
 		
 		// REACTOR LASER FOCUS
 		if (WarpDriveConfig.isIndustrialCraft2Loaded) {
@@ -399,6 +450,9 @@ public class WarpDrive implements LoadingCallback {
 		// COMPONENT ITEMS
 		itemComponent = new ItemComponent();
 		GameRegistry.registerItem(itemComponent, "itemComponent");
+		
+		itemCrystalToken = new ItemCrystalToken();
+		GameRegistry.registerItem(itemCrystalToken, "itemCrystalToken");
 		
 		itemHelmet = new ItemHelmet(armorMaterial, 0);
 		GameRegistry.registerItem(itemHelmet, "itemHelmet");
@@ -411,9 +465,24 @@ public class WarpDrive implements LoadingCallback {
 			GameRegistry.registerItem(itemUpgrade, "itemUpgrade");
 		}
 		
+		// TOOL ITEMS
 		itemTuningRod = new ItemTuningFork();
 		GameRegistry.registerItem(itemTuningRod, "itemTuningRod");
 		
+		// FORCE FIELD UPGRADES
+		itemForceFieldShape = new ItemForceFieldShape();
+		GameRegistry.registerItem(itemForceFieldShape, "itemForceFieldShape");
+
+		itemForceFieldUpgrade = new ItemForceFieldUpgrade();
+		GameRegistry.registerItem(itemForceFieldUpgrade, "itemForceFieldUpgrade");
+
+		// DAMAGE SOURCES
+		damageAsphyxia = new DamageAsphyxia();
+		damageCold = new DamageCold();
+		damageLaser = new DamageLaser();
+		damageShock = new DamageShock();
+		damageTeleportation = new DamageTeleportation();
+		damageWarm = new DamageWarm();
 		
 		proxy.registerEntities();
 		
@@ -481,7 +550,6 @@ public class WarpDrive implements LoadingCallback {
 	
 	@EventHandler
 	public void onFMLServerStarting(FMLServerStartingEvent event) {
-		WarpDrive.logger.info("onFMLServerStarting");
 		event.registerServerCommand(new CommandGenerate());
 		event.registerServerCommand(new CommandSpace());
 		event.registerServerCommand(new CommandInvisible());
@@ -490,7 +558,7 @@ public class WarpDrive implements LoadingCallback {
 		event.registerServerCommand(new CommandEntity());
 	}
 	
-	public Ticket registerChunkLoadTE(TileEntityAbstractChunkLoading tileEntity, boolean refreshLoading) {
+	private Ticket registerChunkLoadTE(TileEntityAbstractChunkLoading tileEntity, boolean refreshLoading) {
 		World worldObj = tileEntity.getWorldObj();
 		if (ForgeChunkManager.ticketCountAvailableFor(this, worldObj) > 0) {
 			Ticket ticket = ForgeChunkManager.requestTicket(this, worldObj, Type.NORMAL);
@@ -546,7 +614,11 @@ public class WarpDrive implements LoadingCallback {
 	}
 	
 	public static void addChatMessage(final ICommandSender sender, final String message) {
-		String[] lines = message.replace("\\n", "\n").split("\n");
+		if (sender == null) {
+			logger.error("Unable to send message to NULL sender: " + message);
+			return;
+		}
+		String[] lines = message.replace("§", "" + (char)167).replace("\\n", "\n").replaceAll("\u00A0", " ").split("\n");
 		for (String line : lines) {
 			sender.addChatMessage(new ChatComponentText(line));
 		}
@@ -558,163 +630,255 @@ public class WarpDrive implements LoadingCallback {
 	public void onFMLMissingMappings(FMLMissingMappingsEvent event) {
 		for (FMLMissingMappingsEvent.MissingMapping mapping: event.get()) {
 			if (mapping.type == GameRegistry.Type.ITEM) {
-				if (mapping.name.equals("WarpDrive:airBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockAir));
-				} else if (mapping.name.equals("WarpDrive:airCanisterFull")) {
-					mapping.remap(itemAirCanisterFull);
-				} else if (mapping.name.equals("WarpDrive:airgenBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockAirGenerator));
-				} else if (mapping.name.equals("WarpDrive:blockHAMachine")) {
-					mapping.remap(Item.getItemFromBlock(blockHighlyAdvancedMachine));
-				} else if (mapping.name.equals("WarpDrive:boosterBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockLaserMedium));
-				} else if (mapping.name.equals("WarpDrive:cameraBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockCamera));
-				} else if (mapping.name.equals("WarpDrive:chunkLoader")) {
-					mapping.remap(Item.getItemFromBlock(blockChunkLoader));
-				} else if (mapping.name.equals("WarpDrive:cloakBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockCloakingCore));
-				} else if (mapping.name.equals("WarpDrive:cloakCoilBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockCloakingCoil));
-				} else if (mapping.name.equals("WarpDrive:component")) {
-					mapping.remap(itemComponent);
-				} else if (mapping.name.equals("WarpDrive:decorative")) {
-					mapping.remap(Item.getItemFromBlock(blockDecorative));
-				} else if (mapping.name.equals("WarpDrive:gasBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockGas));
-				} else if (mapping.name.equals("WarpDrive:helmet")) {
-					mapping.remap(itemHelmet);
-				} else if (mapping.name.equals("WarpDrive:iridiumBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockIridium));
-				} else if (mapping.name.equals("WarpDrive:isolationBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockWarpIsolation));
-				} else if (mapping.name.equals("WarpDrive:laserBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockLaser));
-				} else if (mapping.name.equals("WarpDrive:laserCamBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockLaserCamera));
-				} else if (mapping.name.equals("WarpDrive:laserTreeFarmBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockLaserTreeFarm));
-				} else if (mapping.name.equals("WarpDrive:liftBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockLift));
-				} else if (mapping.name.equals("WarpDrive:miningLaserBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockMiningLaser));
-				} else if (mapping.name.equals("WarpDrive:monitorBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockMonitor));
-				} else if (mapping.name.equals("WarpDrive:powerLaser")) {
-					mapping.remap(Item.getItemFromBlock(blockEnanReactorLaser));
-				} else if (mapping.name.equals("WarpDrive:powerReactor")) {
-					mapping.remap(Item.getItemFromBlock(blockEnanReactorCore));
-				} else if (mapping.name.equals("WarpDrive:powerStore")) {
-					mapping.remap(Item.getItemFromBlock(blockEnergyBank));
-				} else if (mapping.name.equals("WarpDrive:protocolBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockShipController));
-				} else if (mapping.name.equals("WarpDrive:radarBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockRadar));
-				} else if (mapping.name.equals("WarpDrive:reactorLaserFocus")) {
-					mapping.remap(itemIC2reactorLaserFocus);
-				} else if (mapping.name.equals("WarpDrive:reactorMonitor")) {
-					mapping.remap(Item.getItemFromBlock(blockIC2reactorLaserMonitor));
-				} else if (mapping.name.equals("WarpDrive:scannerBlock")) {
-					mapping.remap(Item.getItemFromBlock(blockShipScanner));
-				} else if (mapping.name.equals("WarpDrive:transportBeacon")) {
-					mapping.remap(Item.getItemFromBlock(blockTransportBeacon));
-				} else if (mapping.name.equals("WarpDrive:transporter")) {
-					mapping.remap(Item.getItemFromBlock(blockTransporter));
-				} else if (mapping.name.equals("WarpDrive:upgrade")) {
-					mapping.remap(itemUpgrade);
-				} else if (mapping.name.equals("WarpDrive:warpCore")) {
-					mapping.remap(Item.getItemFromBlock(blockShipCore));
+				switch (mapping.name) {
+					case "WarpDrive:airBlock":
+						mapping.remap(Item.getItemFromBlock(blockAir));
+						break;
+					case "WarpDrive:airCanisterFull":
+						mapping.remap(itemAirCanisterFull);
+						break;
+					case "WarpDrive:airgenBlock":
+						mapping.remap(Item.getItemFromBlock(blockAirGenerator));
+						break;
+					case "WarpDrive:blockHAMachine":
+						mapping.remap(Item.getItemFromBlock(blockHighlyAdvancedMachine));
+						break;
+					case "WarpDrive:boosterBlock":
+						mapping.remap(Item.getItemFromBlock(blockLaserMedium));
+						break;
+					case "WarpDrive:cameraBlock":
+						mapping.remap(Item.getItemFromBlock(blockCamera));
+						break;
+					case "WarpDrive:chunkLoader":
+						mapping.remap(Item.getItemFromBlock(blockChunkLoader));
+						break;
+					case "WarpDrive:cloakBlock":
+						mapping.remap(Item.getItemFromBlock(blockCloakingCore));
+						break;
+					case "WarpDrive:cloakCoilBlock":
+						mapping.remap(Item.getItemFromBlock(blockCloakingCoil));
+						break;
+					case "WarpDrive:component":
+						mapping.remap(itemComponent);
+						break;
+					case "WarpDrive:decorative":
+						mapping.remap(Item.getItemFromBlock(blockDecorative));
+						break;
+					case "WarpDrive:gasBlock":
+						mapping.remap(Item.getItemFromBlock(blockGas));
+						break;
+					case "WarpDrive:helmet":
+						mapping.remap(itemHelmet);
+						break;
+					case "WarpDrive:iridiumBlock":
+						mapping.remap(Item.getItemFromBlock(blockIridium));
+						break;
+					case "WarpDrive:isolationBlock":
+						mapping.remap(Item.getItemFromBlock(blockWarpIsolation));
+						break;
+					case "WarpDrive:laserBlock":
+						mapping.remap(Item.getItemFromBlock(blockLaser));
+						break;
+					case "WarpDrive:laserCamBlock":
+						mapping.remap(Item.getItemFromBlock(blockLaserCamera));
+						break;
+					case "WarpDrive:laserTreeFarmBlock":
+						mapping.remap(Item.getItemFromBlock(blockLaserTreeFarm));
+						break;
+					case "WarpDrive:liftBlock":
+						mapping.remap(Item.getItemFromBlock(blockLift));
+						break;
+					case "WarpDrive:miningLaserBlock":
+						mapping.remap(Item.getItemFromBlock(blockMiningLaser));
+						break;
+					case "WarpDrive:monitorBlock":
+						mapping.remap(Item.getItemFromBlock(blockMonitor));
+						break;
+					case "WarpDrive:powerLaser":
+						mapping.remap(Item.getItemFromBlock(blockEnanReactorLaser));
+						break;
+					case "WarpDrive:powerReactor":
+						mapping.remap(Item.getItemFromBlock(blockEnanReactorCore));
+						break;
+					case "WarpDrive:powerStore":
+						mapping.remap(Item.getItemFromBlock(blockEnergyBank));
+						break;
+					case "WarpDrive:protocolBlock":
+						mapping.remap(Item.getItemFromBlock(blockShipController));
+						break;
+					case "WarpDrive:radarBlock":
+						mapping.remap(Item.getItemFromBlock(blockRadar));
+						break;
+					case "WarpDrive:reactorLaserFocus":
+						mapping.remap(itemIC2reactorLaserFocus);
+						break;
+					case "WarpDrive:reactorMonitor":
+						mapping.remap(Item.getItemFromBlock(blockIC2reactorLaserMonitor));
+						break;
+					case "WarpDrive:scannerBlock":
+						mapping.remap(Item.getItemFromBlock(blockShipScanner));
+						break;
+					case "WarpDrive:transportBeacon":
+						mapping.remap(Item.getItemFromBlock(blockTransportBeacon));
+						break;
+					case "WarpDrive:transporter":
+						mapping.remap(Item.getItemFromBlock(blockTransporter));
+						break;
+					case "WarpDrive:upgrade":
+						mapping.remap(itemUpgrade);
+						break;
+					case "WarpDrive:warpCore":
+						mapping.remap(Item.getItemFromBlock(blockShipCore));
+						break;
 				}
 			} else if (mapping.type == GameRegistry.Type.BLOCK) {
-				if (mapping.name.equals("WarpDrive:airBlock")) {
-					mapping.remap(blockAir);
-				} else if (mapping.name.equals("WarpDrive:airgenBlock")) {
-					mapping.remap(blockAirGenerator);
-				} else if (mapping.name.equals("WarpDrive:blockHAMachine")) {
-					mapping.remap(blockHighlyAdvancedMachine);
-				} else if (mapping.name.equals("WarpDrive:boosterBlock")) {
-					mapping.remap(blockLaserMedium);
-				} else if (mapping.name.equals("WarpDrive:cameraBlock")) {
-					mapping.remap(blockCamera);
-				} else if (mapping.name.equals("WarpDrive:chunkLoader")) {
-					mapping.remap(blockChunkLoader);
-				} else if (mapping.name.equals("WarpDrive:cloakBlock")) {
-					mapping.remap(blockCloakingCore);
-				} else if (mapping.name.equals("WarpDrive:cloakCoilBlock")) {
-					mapping.remap(blockCloakingCoil);
-				} else if (mapping.name.equals("WarpDrive:decorative")) {
-					mapping.remap(blockDecorative);
-				} else if (mapping.name.equals("WarpDrive:gasBlock")) {
-					mapping.remap(blockGas);
-				} else if (mapping.name.equals("WarpDrive:iridiumBlock")) {
-					mapping.remap(blockIridium);
-				} else if (mapping.name.equals("WarpDrive:isolationBlock")) {
-					mapping.remap(blockWarpIsolation);
-				} else if (mapping.name.equals("WarpDrive:laserBlock")) {
-					mapping.remap(blockLaser);
-				} else if (mapping.name.equals("WarpDrive:laserCamBlock")) {
-					mapping.remap(blockLaserCamera);
-				} else if (mapping.name.equals("WarpDrive:laserTreeFarmBlock")) {
-					mapping.remap(blockLaserTreeFarm);
-				} else if (mapping.name.equals("WarpDrive:liftBlock")) {
-					mapping.remap(blockLift);
-				} else if (mapping.name.equals("WarpDrive:miningLaserBlock")) {
-					mapping.remap(blockMiningLaser);
-				} else if (mapping.name.equals("WarpDrive:monitorBlock")) {
-					mapping.remap(blockMonitor);
-				} else if (mapping.name.equals("WarpDrive:powerLaser")) {
-					mapping.remap(blockEnanReactorLaser);
-				} else if (mapping.name.equals("WarpDrive:powerReactor")) {
-					mapping.remap(blockEnanReactorCore);
-				} else if (mapping.name.equals("WarpDrive:powerStore")) {
-					mapping.remap(blockEnergyBank);
-				} else if (mapping.name.equals("WarpDrive:protocolBlock")) {
-					mapping.remap(blockShipController);
-				} else if (mapping.name.equals("WarpDrive:radarBlock")) {
-					mapping.remap(blockRadar);
-				} else if (mapping.name.equals("WarpDrive:reactorMonitor")) {
-					mapping.remap(blockIC2reactorLaserMonitor);
-				} else if (mapping.name.equals("WarpDrive:scannerBlock")) {
-					mapping.remap(blockShipScanner);
-				} else if (mapping.name.equals("WarpDrive:transportBeacon")) {
-					mapping.remap(blockTransportBeacon);
-				} else if (mapping.name.equals("WarpDrive:transporter")) {
-					mapping.remap(blockTransporter);
-				} else if (mapping.name.equals("WarpDrive:warpCore")) {
-					mapping.remap(blockShipCore);
+				switch (mapping.name) {
+					case "WarpDrive:airBlock":
+						mapping.remap(blockAir);
+						break;
+					case "WarpDrive:airgenBlock":
+						mapping.remap(blockAirGenerator);
+						break;
+					case "WarpDrive:blockHAMachine":
+						mapping.remap(blockHighlyAdvancedMachine);
+						break;
+					case "WarpDrive:boosterBlock":
+						mapping.remap(blockLaserMedium);
+						break;
+					case "WarpDrive:cameraBlock":
+						mapping.remap(blockCamera);
+						break;
+					case "WarpDrive:chunkLoader":
+						mapping.remap(blockChunkLoader);
+						break;
+					case "WarpDrive:cloakBlock":
+						mapping.remap(blockCloakingCore);
+						break;
+					case "WarpDrive:cloakCoilBlock":
+						mapping.remap(blockCloakingCoil);
+						break;
+					case "WarpDrive:decorative":
+						mapping.remap(blockDecorative);
+						break;
+					case "WarpDrive:gasBlock":
+						mapping.remap(blockGas);
+						break;
+					case "WarpDrive:iridiumBlock":
+						mapping.remap(blockIridium);
+						break;
+					case "WarpDrive:isolationBlock":
+						mapping.remap(blockWarpIsolation);
+						break;
+					case "WarpDrive:laserBlock":
+						mapping.remap(blockLaser);
+						break;
+					case "WarpDrive:laserCamBlock":
+						mapping.remap(blockLaserCamera);
+						break;
+					case "WarpDrive:laserTreeFarmBlock":
+						mapping.remap(blockLaserTreeFarm);
+						break;
+					case "WarpDrive:liftBlock":
+						mapping.remap(blockLift);
+						break;
+					case "WarpDrive:miningLaserBlock":
+						mapping.remap(blockMiningLaser);
+						break;
+					case "WarpDrive:monitorBlock":
+						mapping.remap(blockMonitor);
+						break;
+					case "WarpDrive:powerLaser":
+						mapping.remap(blockEnanReactorLaser);
+						break;
+					case "WarpDrive:powerReactor":
+						mapping.remap(blockEnanReactorCore);
+						break;
+					case "WarpDrive:powerStore":
+						mapping.remap(blockEnergyBank);
+						break;
+					case "WarpDrive:protocolBlock":
+						mapping.remap(blockShipController);
+						break;
+					case "WarpDrive:radarBlock":
+						mapping.remap(blockRadar);
+						break;
+					case "WarpDrive:reactorMonitor":
+						mapping.remap(blockIC2reactorLaserMonitor);
+						break;
+					case "WarpDrive:scannerBlock":
+						mapping.remap(blockShipScanner);
+						break;
+					case "WarpDrive:transportBeacon":
+						mapping.remap(blockTransportBeacon);
+						break;
+					case "WarpDrive:transporter":
+						mapping.remap(blockTransporter);
+						break;
+					case "WarpDrive:warpCore":
+						mapping.remap(blockShipCore);
+						break;
 				}
 			}
 		}
 	}
 	
-	// add tooltip information with text formating and line splitting
+	// add tooltip information with text formatting and line splitting
 	// will ensure it fits on minimum screen width
-	public static void addTooltip(List list, String tooltip) {
-		tooltip = tooltip.replace("§", "" + (char)167).replace("\\n", "\n");
+	public static void addTooltip(List<String> list, String tooltip) {
+		final String charFormatting = "" + (char)167;
+		tooltip = tooltip.replace("§", charFormatting).replace("\\n", "\n").replace("|", "\n");
+		tooltip = tooltip.replace(charFormatting + "r", charFormatting + "7");
 		
 		String[] split = tooltip.split("\n");
 		for (String line : split) {
 			String lineRemaining = line;
-			while (lineRemaining.length() > 38) {
-				int index = lineRemaining.substring(0, 38).lastIndexOf(' ');
-				if (index == -1) {
-					list.add(lineRemaining);
-					lineRemaining = "";
+			String formatNextLine = "";
+			while (!lineRemaining.isEmpty()) {
+				int indexToCut = formatNextLine.length();
+				int displayLength = 0;
+				int length = lineRemaining.length();
+				while (indexToCut < length && displayLength <= 38) {
+					if (lineRemaining.charAt(indexToCut) == (char)167 && indexToCut + 1 < length) {
+						indexToCut++;
+					} else {
+						displayLength++;
+					}
+					indexToCut++;
+				}
+				if (indexToCut < length) {
+					indexToCut = lineRemaining.substring(0, indexToCut).lastIndexOf(' ');
+					if (indexToCut == -1) {// no space available, show the whole line 'as is'
+						list.add(lineRemaining);
+						lineRemaining = "";
+					} else {// cut at last space
+						list.add(lineRemaining.substring(0, indexToCut).replaceAll("\u00A0", " "));
+						
+						// compute remaining format
+						int index = formatNextLine.length();
+						while (index <= indexToCut) {
+							if (lineRemaining.charAt(index) == (char)167 && index + 1 < indexToCut) {
+								index++;
+								formatNextLine += ("" + (char)167) + lineRemaining.charAt(index);
+							}
+							index++;
+						}
+						
+						// cut for next line, recovering current format
+						lineRemaining = formatNextLine + " " + lineRemaining.substring(indexToCut + 1);
+					}
 				} else {
-					list.add(lineRemaining.substring(0, index));
-					lineRemaining = lineRemaining.substring(index + 1);
+					list.add(lineRemaining.replaceAll("\u00A0", " "));
+					lineRemaining = "";
 				}
 			}
-			
-			list.add(lineRemaining);
 		}
 	}
 	
-	public static Field getField(Class<?> clazz, String deofuscatedName, String obfuscatedName) {
+	public static Field getField(Class<?> clazz, String deobfuscatedName, String obfuscatedName) {
 		Field fieldToReturn = null;
 		
 		try {
-			fieldToReturn = clazz.getDeclaredField(deofuscatedName);
+			fieldToReturn = clazz.getDeclaredField(deobfuscatedName);
 		} catch (Exception exception1) {
 			try {
 				fieldToReturn = clazz.getDeclaredField(obfuscatedName);
@@ -728,12 +892,17 @@ public class WarpDrive implements LoadingCallback {
 					map += fieldDeclared.getName();
 				}
 				WarpDrive.logger.error(String.format("Unable to find %1$s field in %2$s class. Available fields are: %3$s",
-						deofuscatedName, clazz.toString(), map));
+						deobfuscatedName, clazz.toString(), map));
 			}
 		}
 		if (fieldToReturn != null) {
 			fieldToReturn.setAccessible(true);
 		}
 		return fieldToReturn;
+	}
+	
+	public static String format(final long value) {
+		// alternate: BigDecimal.valueOf(value).setScale(0, RoundingMode.HALF_EVEN).toPlainString(),
+		return String.format("%,d", Math.round(value));
 	}
 }

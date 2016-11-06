@@ -39,7 +39,7 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	
 	private int tickCount = 0;
 	
-	private double[] instabilityValues = { 0.0D, 0.0D, 0.0D, 0.0D }; // no instability  = 0, explosion = 100
+	private final double[] instabilityValues = { 0.0D, 0.0D, 0.0D, 0.0D }; // no instability  = 0, explosion = 100
 	private float lasersReceived = 0;
 	private int lastGenerationRate = 0;
 	private int releasedThisTick = 0; // amount of energy released during current tick update
@@ -74,7 +74,7 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	private void increaseInstability(ForgeDirection from, boolean isNatural) {
-		if (canOutputEnergy(from)) {
+		if (energy_canOutput(from)) {
 			return;
 		}
 		
@@ -100,14 +100,14 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	public void decreaseInstability(ForgeDirection from, int energy) {
-		if (canOutputEnergy(from)) {
+		if (energy_canOutput(from)) {
 			return;
 		}
 		
 		// laser is active => start updating reactor
 		hold = false;
 		
-		int amount = convertInternalToRF(energy);
+		int amount = convertInternalToRF_floor(energy);
 		if (amount <= 1) {
 			return;
 		}
@@ -129,7 +129,7 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 		
 		if (WarpDriveConfig.LOGGING_ENERGY) {
 			if (side == 3) {
-				WarpDrive.logger.info("Instability on " + from.toString()
+				WarpDrive.logger.info("Instability on " + from
 					+ " decreased by " + String.format("%.1f", amountToRemove) + "/" + String.format("%.1f", PR_MAX_LASER_EFFECT)
 					+ " after consuming " + amount + "/" + PR_MAX_LASER_ENERGY + " lasersReceived is " + String.format("%.1f", lasersReceived) + " hence nospamFactor is " + nospamFactor);
 			}
@@ -271,9 +271,9 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 		
 		if (exploding) {
 			WarpDrive.logger.info(this
-				+ String.format(" Explosion trigerred, Instability is [%.2f, %.2f, %.2f, %.2f], Energy stored is %d, Laser received is %.2f, %s",
-						new Object[] { instabilityValues[0], instabilityValues[1], instabilityValues[2], instabilityValues[3],
-							containedEnergy, lasersReceived, active ? "ACTIVE" : "INACTIVE" }));
+				+ String.format(" Explosion triggered, Instability is [%.2f, %.2f, %.2f, %.2f], Energy stored is %d, Laser received is %.2f, %s",
+				instabilityValues[0], instabilityValues[1], instabilityValues[2], instabilityValues[3],
+				containedEnergy, lasersReceived, active ? "ACTIVE" : "INACTIVE"));
 			active = false;
 		}
 		return exploding;
@@ -307,12 +307,12 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 		return active(argumentsOCtoCC(arguments));
 	}
 	
-	public Object[] active(Object[] arguments) throws Exception {
+	private Object[] active(Object[] arguments) throws Exception {
 		if (arguments.length == 1) {
-			boolean activate = false;
+			boolean activate;
 			try {
 				activate = toBool(arguments[0]);
-			} catch (Exception e) {
+			} catch (Exception exception) {
 				throw new Exception("Function expects a boolean value");
 			}
 			if (active && !activate) {
@@ -338,11 +338,11 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	private Object[] release(Object[] arguments) throws Exception {
-		boolean doRelease = false;
+		boolean doRelease;
 		if (arguments.length > 0) {
 			try {
 				doRelease = toBool(arguments[0]);
-			} catch (Exception e) {
+			} catch (Exception exception) {
 				throw new Exception("Function expects a boolean value");
 			}
 			
@@ -360,10 +360,10 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	private Object[] releaseRate(Object[] arguments) throws Exception {
-		int rate = -1;
+		int rate;
 		try {
 			rate = toInt(arguments[0]);
-		} catch (Exception e) {
+		} catch (Exception exception) {
 			throw new Exception("Function expects an integer value");
 		}
 		
@@ -386,10 +386,10 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	private Object[] releaseAbove(Object[] arguments) throws Exception {
-		int above = -1;
+		int above;
 		try {
 			above = toInt(arguments[0]);
-		} catch (Exception e) {
+		} catch (Exception exception) {
 			throw new Exception("Function expects an integer value");
 		}
 		
@@ -422,27 +422,28 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 		String methodName = getMethodName(method);
 		
 		try {
-			if (methodName.equals("active")) {
-				return active(arguments);
-				
-			} else if (methodName.equals("energy")) {
-				return energy();
-				
-			} else if (methodName.equals("instability")) {
-				Object[] retVal = new Object[4];
-				for (int i = 0; i < 4; i++) {
-					retVal[i] = instabilityValues[i];
-				}
-				return retVal;
-				
-			} else if (methodName.equals("release")) {
-				return release(arguments);
-				
-			} else if (methodName.equals("releaseRate")) {
-				return releaseRate(arguments);
-				
-			} else if (methodName.equals("releaseAbove")) {
-				return releaseAbove(arguments);
+			switch (methodName) {
+				case "active":
+					return active(arguments);
+
+				case "energy":
+					return energy();
+
+				case "instability":
+					Object[] retVal = new Object[4];
+					for (int i = 0; i < 4; i++) {
+						retVal[i] = instabilityValues[i];
+					}
+					return retVal;
+
+				case "release":
+					return release(arguments);
+
+				case "releaseRate":
+					return releaseRate(arguments);
+
+				case "releaseAbove":
+					return releaseAbove(arguments);
 			}
 		} catch (Exception exception) {
 			return new String[] { exception.getMessage() };
@@ -453,7 +454,7 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	
 	// POWER INTERFACES
 	@Override
-	public int getPotentialEnergyOutput() {
+	public int energy_getPotentialOutput() {
 		if (hold) {// still loading/booting => hold output
 			return 0;
 		}
@@ -462,34 +463,31 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 		if (releaseMode == MODE_MANUAL_RELEASE) {
 			result = Math.min(Math.max(0, containedEnergy), capacity);
 			if (WarpDriveConfig.LOGGING_ENERGY) {
-				WarpDrive.logger.info("PotentialOutput Manual " + result + " RF (" + convertRFtoInternal(result) + " internal) capacity " + capacity);
+				WarpDrive.logger.info("PotentialOutput Manual " + result + " RF (" + convertRFtoInternal_floor(result) + " internal) capacity " + capacity);
 			}
 		} else if (releaseMode == MODE_RELEASE_ABOVE) {
 			result = Math.min(Math.max(0, containedEnergy - releaseAbove), capacity);
 			if (WarpDriveConfig.LOGGING_ENERGY) {
-				WarpDrive.logger.info("PotentialOutput Above " + result + " RF (" + convertRFtoInternal(result) + " internal) capacity " + capacity);
+				WarpDrive.logger.info("PotentialOutput Above " + result + " RF (" + convertRFtoInternal_floor(result) + " internal) capacity " + capacity);
 			}
 		} else if (releaseMode == MODE_RELEASE_AT_RATE) {
 			int remainingRate = Math.max(0, releaseRate - releasedThisTick);
 			result = Math.min(Math.max(0, containedEnergy), Math.min(remainingRate, capacity));
 			if (WarpDriveConfig.LOGGING_ENERGY) {
-				WarpDrive.logger.info("PotentialOutput Rated " + result + " RF (" + convertRFtoInternal(result) + " internal) remainingRate " + remainingRate + " RF/t capacity " + capacity);
+				WarpDrive.logger.info("PotentialOutput Rated " + result + " RF (" + convertRFtoInternal_floor(result) + " internal) remainingRate " + remainingRate + " RF/t capacity " + capacity);
 			}
 		}
-		return convertRFtoInternal(result);
+		return convertRFtoInternal_floor(result);
 	}
 	
 	@Override
-	public boolean canOutputEnergy(ForgeDirection from) {
-		if (from.equals(ForgeDirection.UP) || from.equals(ForgeDirection.DOWN)) {
-			return true;
-		}
-		return false;
+	public boolean energy_canOutput(ForgeDirection from) {
+		return from.equals(ForgeDirection.UP) || from.equals(ForgeDirection.DOWN);
 	}
 	
 	@Override
-	protected void energyOutputDone(int energyOutput_internal) {
-		int energyOutput_RF = convertInternalToRF(energyOutput_internal);
+	protected void energy_outputDone(int energyOutput_internal) {
+		int energyOutput_RF = convertRFtoInternal_ceil(energyOutput_internal);
 		containedEnergy -= energyOutput_RF;
 		if (containedEnergy < 0) {
 			containedEnergy = 0;
@@ -502,13 +500,13 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	@Override
-	public int getEnergyStored() {
-		return convertRFtoInternal(containedEnergy);
+	public int energy_getEnergyStored() {
+		return convertRFtoInternal_floor(containedEnergy);
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
-		return convertRFtoInternal(WarpDriveConfig.ENAN_REACTOR_MAX_ENERGY_STORED);
+	public int energy_getMaxStorage() {
+		return convertRFtoInternal_floor(WarpDriveConfig.ENAN_REACTOR_MAX_ENERGY_STORED);
 	}
 	
 	// Forge overrides
@@ -541,11 +539,26 @@ public class TileEntityEnanReactorCore extends TileEntityAbstractEnergy {
 	}
 	
 	@Override
+	public NBTTagCompound writeItemDropNBT(NBTTagCompound nbtTagCompound) {
+		nbtTagCompound = super.writeItemDropNBT(nbtTagCompound);
+		nbtTagCompound.removeTag("energy");
+		nbtTagCompound.removeTag("releaseMode");
+		nbtTagCompound.removeTag("releaseRate");
+		nbtTagCompound.removeTag("releaseAbove");
+		nbtTagCompound.removeTag("i0");
+		nbtTagCompound.removeTag("i1");
+		nbtTagCompound.removeTag("i2");
+		nbtTagCompound.removeTag("i3");
+		nbtTagCompound.removeTag("active");
+		return nbtTagCompound;
+	}
+	
+	@Override
 	public String toString() {
 		return String.format("%s \'%s\' @ \'%s\' (%d %d %d)",
 			getClass().getSimpleName(),
 			connectedComputers == null ? "~NULL~" : connectedComputers,
 			worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(),
-			Integer.valueOf(xCoord), Integer.valueOf(yCoord), Integer.valueOf(zCoord));
+			xCoord, yCoord, zCoord);
 	}
 }

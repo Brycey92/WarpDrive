@@ -2,32 +2,29 @@ package cr0s.warpdrive.block.detection;
 
 import java.util.Random;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import cr0s.warpdrive.WarpDrive;
+import cr0s.warpdrive.block.BlockAbstractContainer;
 
-public class BlockRadar extends BlockContainer {
+public class BlockRadar extends BlockAbstractContainer {
 	private IIcon[] iconBuffer;
 	
-	private final int ICON_SIDE_INACTIVE = 0;
-	private final int ICON_BOTTOM = 1;
-	private final int ICON_TOP = 2;
-	private final int ICON_SIDE_ACTIVATED = 3;
-	private final int ICON_SIDE_ACTIVATED_SCAN = 4;
+	private static final int ICON_SIDE_INACTIVE = 0;
+	private static final int ICON_BOTTOM = 1;
+	private static final int ICON_TOP = 2;
+	private static final int ICON_SIDE_ACTIVATED = 3;
+	private static final int ICON_SIDE_ACTIVATED_SCAN = 4;
 	
 	public BlockRadar() {
-		super(Material.rock);
-		setHardness(0.5F);
-		setStepSound(Block.soundTypeMetal);
-		setCreativeTab(WarpDrive.creativeTabWarpDrive);
+		super(Material.iron);
 		setBlockName("warpdrive.detection.Radar");
 	}
 	
@@ -92,6 +89,11 @@ public class BlockRadar extends BlockContainer {
 	@Override
 	public Item getItemDropped(int par1, Random par2Random, int par3) {
 		return Item.getItemFromBlock(this);
+	}
+	
+	@Override
+	public byte getTier(final ItemStack itemStack) {
+		return 2;
 	}
 	
 	@Override

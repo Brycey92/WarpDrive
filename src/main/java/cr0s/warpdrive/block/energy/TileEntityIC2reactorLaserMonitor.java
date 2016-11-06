@@ -35,10 +35,10 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 		IC2_sourceTier = 2;
 	}
 	
-	private static int[] deltaX = {-2, 2, 0, 0, 0, 0};
-	private static int[] deltaY = { 0, 0,-2, 2, 0, 0};
-	private static int[] deltaZ = { 0, 0, 0, 0,-2, 2};
-	private static byte[] deltaSides = { 1, 2, 4, 8, 16, 32 };
+	private static final int[] deltaX = {-2, 2, 0, 0, 0, 0};
+	private static final int[] deltaY = { 0, 0,-2, 2, 0, 0};
+	private static final int[] deltaZ = { 0, 0, 0, 0,-2, 2};
+	private static final byte[] deltaSides = { 1, 2, 4, 8, 16, 32 };
 	
 	protected boolean isSideActive(int side) {
 		switch (side) {
@@ -55,7 +55,7 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 	// returns IReactor tile entities
 	@Optional.Method(modid = "IC2")
 	private Set<IReactor> findReactors() {
-		Set<IReactor> output = new HashSet<IReactor>();
+		Set<IReactor> output = new HashSet<>();
 		
 		byte newActiveSides = 0;
 		for(int i = 0; i < deltaX.length; i++) {
@@ -102,10 +102,10 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 				if (item != null) {
 					if (item.getItem() instanceof ItemIC2reactorLaserFocus) {
 						int heatInLaserFocus = item.getItemDamage();
-						int heatRemovable = (int) Math.floor(Math.min(getEnergyStored() / WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT, heatInLaserFocus));
+						int heatRemovable = (int) Math.floor(Math.min(energy_getEnergyStored() / WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT, heatInLaserFocus));
 						if (heatRemovable > 0) {
 							didCoolReactor = true;
-							if (consumeEnergy((int) Math.ceil(heatRemovable * WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT), false)) {
+							if (energy_consume((int) Math.ceil(heatRemovable * WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT), false)) {
 								item.setItemDamage(heatInLaserFocus - heatRemovable);
 							}
 						}
@@ -137,7 +137,7 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 			Vector3 myPos = new Vector3(this).translate(0.5);
 			Set<IReactor> reactors = findReactors();
 			setMetadata();
-			if (reactors.size() == 0) {
+			if (reactors.isEmpty()) {
 				return;
 			}
 			
@@ -151,7 +151,7 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 	
 	private void setMetadata() {
 		int metadata = (updateFlag ? 0 : 1) | (activeSides != 0 ? 2 : 0);
-		if (getEnergyStored() >= WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT) {
+		if (energy_getEnergyStored() >= WarpDriveConfig.IC2_REACTOR_ENERGY_PER_HEAT) {
 			metadata |= 8;
 		}
 		if (getBlockMetadata() != metadata) {
@@ -180,33 +180,35 @@ public class TileEntityIC2reactorLaserMonitor extends TileEntityAbstractEnergy {
 	
 	@Override
 	public void onDataPacket(NetworkManager networkManager, S35PacketUpdateTileEntity packet) {
-		NBTTagCompound tag = packet.func_148857_g();
-		readFromNBT(tag);
+		NBTTagCompound tagCompound = packet.func_148857_g();
+		readFromNBT(tagCompound);
 	}
 	
 	@Override
 	@Optional.Method(modid = "IC2")
 	public String getStatus() {
+		if (worldObj == null) {
+			return super.getStatus();
+		}
+		
 		Set<IReactor> reactors = findReactors();
-		if (reactors != null && reactors.size() > 0) {
-			return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-					getBlockType().getLocalizedName())
-					+ StatCollector.translateToLocalFormatted("warpdrive.IC2reactorLaserMonitor.multipleReactors",
-							reactors.size());
+		if (reactors != null && !reactors.isEmpty()) {
+			return super.getStatus() 
+			       + StatCollector.translateToLocalFormatted("warpdrive.IC2reactorLaserMonitor.multipleReactors",
+			reactors.size());
 		} else {
-			return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-					getBlockType().getLocalizedName())
-					+ StatCollector.translateToLocalFormatted("warpdrive.IC2reactorLaserMonitor.noReactor");
+			return super.getStatus() 
+			       + StatCollector.translateToLocalFormatted("warpdrive.IC2reactorLaserMonitor.noReactor");
 		}
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.IC2_REACTOR_MAX_ENERGY_STORED;
 	}
 	
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		return true;
 	}
 }

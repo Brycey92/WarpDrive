@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockLiquid;
+import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.common.util.ForgeDirection;
@@ -42,14 +43,17 @@ public abstract class TileEntityAbstractMiner extends TileEntityAbstractLaser {
 	
 	protected void harvestBlock(VectorI valuable) {
 		Block block = worldObj.getBlock(valuable.x, valuable.y, valuable.z);
+		if (block == Blocks.air) {
+			return;
+		}
 		int blockMeta = worldObj.getBlockMetadata(valuable.x, valuable.y, valuable.z);
 		if (block != null && (block instanceof BlockLiquid)) {
 			// Evaporate fluid
 			worldObj.playSoundEffect(valuable.x + 0.5D, valuable.y + 0.5D, valuable.z + 0.5D, "random.fizz", 0.5F,
 					2.6F + (worldObj.rand.nextFloat() - worldObj.rand.nextFloat()) * 0.8F);
 		} else {
-			List<ItemStack> stacks = getItemStackFromBlock(valuable.x, valuable.y, valuable.z, block, blockMeta);
-			if (addToConnectedInventory(stacks)) {
+			List<ItemStack> itemStacks = getItemStackFromBlock(valuable.x, valuable.y, valuable.z, block, blockMeta);
+			if (addToConnectedInventories(itemStacks)) {
 				stop();
 			}
 			// standard harvest block effect
@@ -58,26 +62,27 @@ public abstract class TileEntityAbstractMiner extends TileEntityAbstractLaser {
 		worldObj.setBlockToAir(valuable.x, valuable.y, valuable.z);
 	}
 	
-	private List<ItemStack> getItemStackFromBlock(int i, int j, int k, Block block, int blockMeta) {
+	private List<ItemStack> getItemStackFromBlock(int x, int y, int z, Block block, int blockMeta) {
 		if (block == null) {
+			WarpDrive.logger.error(this + " Invalid block at " + x + " " + y + " " + z);
 			return null;
 		}
 		if (enableSilktouch) {
 			boolean isSilkHarvestable = false;
 			try {
-				isSilkHarvestable = block.canSilkHarvest(worldObj, null, i, j, k, blockMeta);
+				isSilkHarvestable = block.canSilkHarvest(worldObj, null, x, y, z, blockMeta);
 			} catch (Exception exception) {// protect in case the mined block is corrupted
 				exception.printStackTrace();
 			}
 			if (isSilkHarvestable) {
-				ArrayList<ItemStack> isBlock = new ArrayList<ItemStack>();
+				ArrayList<ItemStack> isBlock = new ArrayList<>();
 				isBlock.add(new ItemStack(block, 1, blockMeta));
 				return isBlock;
 			}
 		}
 		
 		try {
-			return block.getDrops(worldObj, i, j, k, blockMeta, 0);
+			return block.getDrops(worldObj, x, y, z, blockMeta, 0);
 		} catch (Exception exception) {// protect in case the mined block is corrupted
 			exception.printStackTrace();
 			return null;

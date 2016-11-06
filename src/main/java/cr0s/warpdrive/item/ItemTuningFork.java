@@ -2,6 +2,8 @@ package cr0s.warpdrive.item;
 
 import java.util.List;
 
+import cr0s.warpdrive.block.energy.BlockEnergyBank;
+import net.minecraft.block.Block;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
@@ -35,7 +37,7 @@ public class ItemTuningFork extends Item {
 		icons = new IIcon[16];
 		
 		for (int i = 0; i < 16; ++i) {
-			this.icons[i] = iconRegister.registerIcon("warpdrive:tool/tuningFork_" + getDyeColorName(i));
+			icons[i] = iconRegister.registerIcon("warpdrive:tool/tuningFork_" + getDyeColorName(i));
 		}
 	}
 	
@@ -117,6 +119,12 @@ public class ItemTuningFork extends Item {
 	}
 	
 	@Override
+	public boolean doesSneakBypassUse(World world, int x, int y, int z, EntityPlayer player) {
+		Block block = world.getBlock(x, y, z);
+		return block instanceof BlockEnergyBank || super.doesSneakBypassUse(world, x, y, z, player);
+	}
+	
+	@Override
 	public void addInformation(ItemStack itemStack, EntityPlayer entityPlayer, List list, boolean advancedItemTooltips) {
 		super.addInformation(itemStack, entityPlayer, list, advancedItemTooltips);
 		
@@ -124,7 +132,7 @@ public class ItemTuningFork extends Item {
 		tooltip += StatCollector.translateToLocalFormatted("item.warpdrive.tool.TuningFork.tooltip.videoChannel", getVideoChannel(itemStack));
 		tooltip += "\n" + StatCollector.translateToLocalFormatted("item.warpdrive.tool.TuningFork.tooltip.beamFrequency", getBeamFrequency(itemStack));
 		
-		tooltip += StatCollector.translateToLocal("item.warpdrive.tool.TuningFork.tooltip.usage");
+		tooltip += "\n\n" + StatCollector.translateToLocal("item.warpdrive.tool.TuningFork.tooltip.usage");
 		
 		WarpDrive.addTooltip(list, tooltip);
 	}

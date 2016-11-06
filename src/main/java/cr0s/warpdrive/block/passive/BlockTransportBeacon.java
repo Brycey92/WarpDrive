@@ -1,5 +1,6 @@
 package cr0s.warpdrive.block.passive;
 
+import cr0s.warpdrive.WarpDrive;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
@@ -7,7 +8,6 @@ import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
-import cr0s.warpdrive.WarpDrive;
 
 public class BlockTransportBeacon extends Block {
 	public BlockTransportBeacon() {
@@ -46,7 +46,7 @@ public class BlockTransportBeacon extends Block {
 	@Override
 	public MovingObjectPosition collisionRayTrace(World par1World, int par2, int par3, int par4, Vec3 par5Vec3, Vec3 par6Vec3) {
 		float f = 0.065F;
-		this.setBlockBounds(0.5F - f, 0.0F, 0.5F - f, 0.5F + f, 0.6F, 0.5F + f);
+		setBlockBounds(0.5F - f, 0.0F, 0.5F - f, 0.5F + f, 0.6F, 0.5F + f);
 
 		return super.collisionRayTrace(par1World, par2, par3, par4, par5Vec3, par6Vec3);
 	}

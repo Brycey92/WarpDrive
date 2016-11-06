@@ -1,23 +1,22 @@
 package cr0s.warpdrive.block;
 
-import java.util.Map;
 
 import cpw.mods.fml.common.Optional;
+import cr0s.warpdrive.item.ItemUpgrade;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.world.ChunkCoordIntPair;
 import net.minecraft.world.chunk.Chunk;
-import cr0s.warpdrive.api.IUpgradable;
 import cr0s.warpdrive.config.WarpDriveConfig;
 import cr0s.warpdrive.data.UpgradeType;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
+import net.minecraftforge.common.util.ForgeDirection;
 
-public class TileEntityChunkLoader extends TileEntityAbstractChunkLoading implements IUpgradable
-{
+public class TileEntityChunkLoader extends TileEntityAbstractChunkLoading {
 	private boolean canLoad = false;
 	private boolean shouldLoad = false;
 
-	private boolean inited = false;
+	private boolean initialised = false;
 	private ChunkCoordIntPair myChunk;
 
 	int negDX, posDX, negDZ, posDZ;
@@ -38,38 +37,46 @@ public class TileEntityChunkLoader extends TileEntityAbstractChunkLoading implem
 				"active",
 				"upgrades"
 		});
+		
+		setUpgradeMaxCount(ItemUpgrade.getItemStack(UpgradeType.Energy), 2);
+		setUpgradeMaxCount(ItemUpgrade.getItemStack(UpgradeType.Power), 2);
 	}
-
+	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.CL_MAX_ENERGY;
 	}
-
+	
+	@Override
+	public boolean energy_canInput(ForgeDirection from) {
+		return true;
+	}
+	
 	@Override
 	public boolean shouldChunkLoad()
 	{
 		return shouldLoad && canLoad;
 	}
-
+	
 	@Override
 	public void updateEntity()
 	{
 		super.updateEntity();
 
-		if(!inited)
+		if(!initialised)
 		{
-			inited = true;
+			initialised = true;
 			myChunk = worldObj.getChunkFromBlockCoords(xCoord, zCoord).getChunkCoordIntPair();
 			changedDistance();
 		}
 
 		if(shouldLoad)
 		{
-			canLoad = consumeEnergy(area * WarpDriveConfig.CL_RF_PER_CHUNKTICK, false);
+			canLoad = energy_consume(area * WarpDriveConfig.CL_RF_PER_CHUNKTICK, false);
 		}
 		else
 		{
-			canLoad = consumeEnergy(area * WarpDriveConfig.CL_RF_PER_CHUNKTICK, true);
+			canLoad = energy_consume(area * WarpDriveConfig.CL_RF_PER_CHUNKTICK, true);
 		}
 	}
 	
@@ -126,75 +133,35 @@ public class TileEntityChunkLoader extends TileEntityAbstractChunkLoading implem
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
 		
-		if(methodName.equals("radius"))
-		{
-			if(arguments.length == 1)
-			{
-				int dist = toInt(arguments[0]);
-				negDX = dist;
-				negDZ = dist;
-				posDX = dist;
-				posDZ = dist;
-				changedDistance();
-				return new Object[] { true };
-			}
-			return new Object[] { false };
-		}
-		else if(methodName.equals("bounds"))
-		{
-			if(arguments.length == 4)
-			{
-				negDX = toInt(arguments[0]);
-				posDX = toInt(arguments[1]);
-				negDZ = toInt(arguments[2]);
-				posDZ = toInt(arguments[3]);
-				changedDistance();
-			}
-			return new Object[] { negDX, posDX, negDZ, posDZ };
-		}
-		else if(methodName.equals("active"))
-		{
-			if(arguments.length == 1)
-				shouldLoad = toBool(arguments[0]);
-			return new Object[] { shouldChunkLoad() };
-		}
-		else if(methodName.equals("upgrades"))
-		{
-			return getUpgrades();
+		switch (methodName) {
+			case "radius":
+				if (arguments.length == 1) {
+					int dist = toInt(arguments[0]);
+					negDX = dist;
+					negDZ = dist;
+					posDX = dist;
+					posDZ = dist;
+					changedDistance();
+					return new Object[]{true};
+				}
+				return new Object[]{false};
+			case "bounds":
+				if (arguments.length == 4) {
+					negDX = toInt(arguments[0]);
+					posDX = toInt(arguments[1]);
+					negDZ = toInt(arguments[2]);
+					posDZ = toInt(arguments[3]);
+					changedDistance();
+				}
+				return new Object[]{negDX, posDX, negDZ, posDZ};
+			case "active":
+				if (arguments.length == 1)
+					shouldLoad = toBool(arguments[0]);
+				return new Object[]{shouldChunkLoad()};
+			case "upgrades":
+				return new Object[] { getUpgradesAsString() };
 		}
 		
 		return super.callMethod(computer, context, method, arguments);
-	}
-
-	@Override
-	public boolean takeUpgrade(UpgradeType upgradeType, boolean simulate)
-	{
-		int max = 0;
-		if(upgradeType == UpgradeType.Energy)
-			max = 2;
-		else if(upgradeType == UpgradeType.Power)
-			max = 2;
-
-		if(max == 0)
-			return false;
-
-		if(upgrades.containsKey(upgradeType))
-			if(upgrades.get(upgradeType) >= max)
-				return false;
-
-		if(!simulate)
-		{
-			int c = 0;
-			if(upgrades.containsKey(upgradeType))
-				c = upgrades.get(upgradeType);
-			upgrades.put(upgradeType, c+1);
-		}
-		return true;
-	}
-
-	@Override
-	public Map<UpgradeType, Integer> getInstalledUpgrades()
-	{
-		return upgrades;
 	}
 }

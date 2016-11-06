@@ -8,7 +8,7 @@ import cr0s.warpdrive.config.WarpDriveConfig;
 
 public class TileEntityAirGenerator extends TileEntityAbstractEnergy {
 	private int cooldownTicks = 0;
-	private final int START_CONCENTRATION_VALUE = 15;
+	private static final int START_CONCENTRATION_VALUE = 15;
 	
 	public TileEntityAirGenerator() {
 		super();
@@ -28,7 +28,7 @@ public class TileEntityAirGenerator extends TileEntityAbstractEnergy {
 			return;
 		}
 		
-		// Air generator works only in spaces
+		// Air generator works only in space & hyperspace
 		if (worldObj.provider.dimensionId != WarpDriveConfig.G_SPACE_DIMENSION_ID && worldObj.provider.dimensionId != WarpDriveConfig.G_HYPERSPACE_DIMENSION_ID) {
 			if (getBlockMetadata() != 0) {
 				worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 0, 2); // set disabled texture
@@ -38,7 +38,7 @@ public class TileEntityAirGenerator extends TileEntityAbstractEnergy {
 		
 		cooldownTicks++;
 		if (cooldownTicks > WarpDriveConfig.AIRGEN_AIR_GENERATION_TICKS) {
-			if (consumeEnergy(WarpDriveConfig.AIRGEN_ENERGY_PER_NEWAIRBLOCK, true)) {
+			if (energy_consume(WarpDriveConfig.AIRGEN_ENERGY_PER_NEWAIRBLOCK, true)) {
 				if (getBlockMetadata() != 1) {
 					worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 1, 2); // set enabled texture
 				}
@@ -60,14 +60,14 @@ public class TileEntityAirGenerator extends TileEntityAbstractEnergy {
 	
 	private void releaseAir(int xOffset, int yOffset, int zOffset) {
 		Block block = worldObj.getBlock(xCoord + xOffset, yCoord + yOffset, zCoord + zOffset);
-		if (block.isAir(worldObj, xOffset, yOffset, zOffset)) {// can be air
+		if (block.isAir(worldObj, xCoord + xOffset, yCoord + yOffset, zCoord + zOffset)) {// can be air
 			int energy_cost = (!block.isAssociatedBlock(WarpDrive.blockAir)) ? WarpDriveConfig.AIRGEN_ENERGY_PER_NEWAIRBLOCK : WarpDriveConfig.AIRGEN_ENERGY_PER_EXISTINGAIRBLOCK;
-			if (consumeEnergy(energy_cost, true)) {// enough energy
+			if (energy_consume(energy_cost, true)) {// enough energy
 				if (worldObj.setBlock(xCoord + xOffset, yCoord + yOffset, zCoord + zOffset, WarpDrive.blockAir, START_CONCENTRATION_VALUE, 2)) {
 					// (needs to renew air or was not maxed out)
-					consumeEnergy(WarpDriveConfig.AIRGEN_ENERGY_PER_NEWAIRBLOCK, false);
+					energy_consume(WarpDriveConfig.AIRGEN_ENERGY_PER_NEWAIRBLOCK, false);
 				} else {
-					consumeEnergy(WarpDriveConfig.AIRGEN_ENERGY_PER_EXISTINGAIRBLOCK, false);
+					energy_consume(WarpDriveConfig.AIRGEN_ENERGY_PER_EXISTINGAIRBLOCK, false);
 				}
 			} else {// low energy => remove air block
 				if (block.isAssociatedBlock(WarpDrive.blockAir)) {
@@ -95,12 +95,20 @@ public class TileEntityAirGenerator extends TileEntityAbstractEnergy {
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.AIRGEN_MAX_ENERGY_STORED;
 	}
 	
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		return true;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("%s @ \'%s\' (%d %d %d)",
+		getClass().getSimpleName(),
+		worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(),
+		xCoord, yCoord, zCoord);
 	}
 }

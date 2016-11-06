@@ -10,6 +10,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
 import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.block.hull.BlockHullGlass;
 import cr0s.warpdrive.block.hull.BlockHullPlain;
+import cr0s.warpdrive.block.hull.BlockHullStairs;
 import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
@@ -19,7 +20,7 @@ import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.oredict.OreDictionary;
 
 public class Dictionary {
-	private static boolean adjustResistance = false;
+	private static final boolean adjustResistance = false;
 	
 	// Tagged blocks and entities (loaded from configuration file at PreInit, parsed at PostInit)
 	private static HashMap<String, String> taggedBlocks = null;
@@ -36,8 +37,10 @@ public class Dictionary {
 	public static HashSet<Block> BLOCKS_LEFTBEHIND = null;
 	public static HashSet<Block> BLOCKS_EXPANDABLE = null;
 	public static HashSet<Block> BLOCKS_MINING = null;
-	public static HashSet<Block> BLOCKS_NOMINING = null;
+	public static HashSet<Block> BLOCKS_SKIPMINING = null;
+	public static HashSet<Block> BLOCKS_STOPMINING = null;
 	public static HashMap<Block, Integer> BLOCKS_PLACE = null;
+	public static HashSet<Block> BLOCKS_NOCAMOUFLAGE = null;
 	
 	// Entities dictionary
 	public static HashSet<String> ENTITIES_ANCHOR = null;
@@ -61,80 +64,129 @@ public class Dictionary {
 					+ "Invalid tags will be ignored silently. Tags and block names are case sensitive.\n"
 					+ "In case of conflicts, the latest tag overwrite the previous ones.\n"
 					+ "- Soil: this block is a soil for plants (default: dirt, farmland, grass, sand & soul sand).\n"
-					+ "- Log: this block is harvestable as a wood log (default: all 'log*', '*log' & '*logs' blocks from the ore dictionnary).\n"
-					+ "- Leaf: this block is harvestable as a leaf (default: all 'leave*', '*leave' & '*leaves' blocks from the ore dictionnary).\n"
+					+ "- Log: this block is harvestable as a wood log (default: all 'log*', '*log' & '*logs' blocks from the ore dictionary).\n"
+					+ "- Leaf: this block is harvestable as a leaf (default: all 'leave*', '*leave' & '*leaves' blocks from the ore dictionary).\n"
 					+ "- Anchor: ship can't move with this block aboard (default: bedrock and assimilated).\n"
 					+ "- NoMass: this block doesn't count when calculating ship volume/mass (default: leaves, all 'air' blocks).\n"
 					+ "- LeftBehind: this block won't move with your ship (default: RailCraft heat, WarpDrive gases).\n"
 					+ "- Expandable: this block will be squished/ignored in case of collision.\n"
-					+ "- Mining: this block is mineable (default: all 'ore' blocks from the ore dictionnary).\n"
-					+ "- NoMining: this block is non-mineable (default: forcefields).\n"
+					+ "- Mining: this block is mineable (default: all 'ore' blocks from the ore dictionary).\n"
+					+ "- SkipMining: this block is ignored from mining (default: bedrock).\n"
+					+ "- StopMining: this block will prevent mining through it (default: forcefields).\n"
 					+ "- PlaceEarliest: this block will be removed last and placed first (default: ship hull and projectors).\n"
 					+ "- PlaceEarlier: this block will be placed fairly soon (default: forcefield blocks).\n"
 					+ "- PlaceNormal: this block will be removed and placed with non-tile entities.\n"
 					+ "- PlaceLater: this block will be placed fairly late (default: IC2 Reactor core).\n"
-					+ "- PlaceLatest: this block will be removed first and placed last (default: IC2 Reactor chamber).");
+					+ "- PlaceLatest: this block will be removed first and placed last (default: IC2 Reactor chamber).\n"
+					+ "- NoCamouflage: this block isn't valid for camouflage.");
 			
 			ConfigCategory categoryBlockTags = config.getCategory("block_tags");
 			String[] taggedBlocksName = categoryBlockTags.getValues().keySet().toArray(new String[0]);
 			if (taggedBlocksName.length == 0) {
 				// farming
-				config.get("block_tags", "minecraft:dirt"                        , "Soil").getString();
-				config.get("block_tags", "minecraft:farmland"                    , "Soil").getString();
-				config.get("block_tags", "minecraft:grass"                       , "Soil").getString();
-				config.get("block_tags", "minecraft:mycelium"                    , "Soil").getString();
-				config.get("block_tags", "minecraft:sand"                        , "Soil").getString();
-				config.get("block_tags", "minecraft:soul_sand"                   , "Soil").getString();
-				config.get("block_tags", "IC2:blockRubWood"                      , "Log").getString();
+				config.get("block_tags", "minecraft:dirt"                                  , "Soil").getString();
+				config.get("block_tags", "minecraft:farmland"                              , "Soil").getString();
+				config.get("block_tags", "minecraft:grass"                                 , "Soil").getString();
+				config.get("block_tags", "minecraft:mycelium"                              , "Soil").getString();
+				config.get("block_tags", "minecraft:sand"                                  , "Soil").getString();
+				config.get("block_tags", "minecraft:soul_sand"                             , "Soil").getString();
+				config.get("block_tags", "IC2:blockRubWood"                                , "Log").getString();
+				config.get("block_tags", "TConstruct:slime.gel"                            , "Log").getString();
+				config.get("block_tags", "TConstruct:slime.leaves"                         , "Leaf").getString();
 				
 				// anchors
-				config.get("block_tags", "minecraft:bedrock"                     , "Anchor NoMining").getString();
-				config.get("block_tags", "IC2:blockPersonal"                     , "Anchor NoMining").getString();
-				config.get("block_tags", "Artifacts:invisible_bedrock"           , "Anchor NoMining").getString();
-				config.get("block_tags", "Artifacts:invisible_bedrock"           , "Anchor NoMining").getString();
-				config.get("block_tags", "Artifacts:anti_anti_builder_stone"     , "Anchor NoMining").getString();
-				config.get("block_tags", "Artifacts:anti_builder"                , "Anchor NoMining").getString();
+				config.get("block_tags", "minecraft:bedrock"                               , "Anchor SkipMining").getString();
+				config.get("block_tags", "minecraft:command_block"                         , "Anchor StopMining").getString();
+				config.get("block_tags", "minecraft:end_portal_frame"                      , "Anchor StopMining").getString();
+				config.get("block_tags", "minecraft:end_portal"                            , "Anchor StopMining").getString();
+				config.get("block_tags", "IC2:blockPersonal"                               , "Anchor SkipMining").getString();
+				config.get("block_tags", "Artifacts:invisible_bedrock"                     , "Anchor StopMining").getString();
+				config.get("block_tags", "Artifacts:anti_anti_builder_stone"               , "Anchor StopMining").getString();
+				config.get("block_tags", "Artifacts:anti_builder"                          , "Anchor StopMining").getString();
+				config.get("block_tags", "malisisdoors:rustyHatch"                         , "Anchor").getString();
 				
 				// placement priorities
-				config.get("block_tags", "minecraft:lever"                       , "PlaceLatest").getString();
-				config.get("block_tags", "IC2:blockReinforcedFoam"               , "PlaceEarliest NoMining").getString();
-				config.get("block_tags", "IC2:blockAlloy"                        , "PlaceEarliest NoMining").getString();
-				config.get("block_tags", "IC2:blockAlloyGlass"                   , "PlaceEarliest NoMining").getString();
-				config.get("block_tags", "minecraft:obsidian"                    , "PlaceEarliest Mining").getString();
-				config.get("block_tags", "AdvancedRepulsionSystems:field"        , "PlaceEarlier NoMining").getString();
-				// FIXME config.get("block_tags", "MFFS:field"                            , "PlaceEarlier NoMining"	).getString();
-				config.get("block_tags", "IC2:blockGenerator"                    , "PlaceLater").getString();
-				config.get("block_tags", "IC2:blockReactorChamber"               , "PlaceLatest").getString();
-				config.get("block_tags", "ImmersiveEngineering:metalDevice"      , "PlaceLatest").getString();	// FIXME: need to fine tune at metadata level
-				// config.get("block_tags", "SGCraft:stargateBase"                  , "PlaceEarliest").getString();
-				// config.get("block_tags", "SGCraft:stargateBase"                  , "PlaceEarliest").getString();
-				// config.get("block_tags", "SGCraft:stargateRing"                  , "PlaceEarlier").getString();
-				// config.get("block_tags", "SGCraft:stargateController"            , "PlaceLatest").getString();
-				config.get("block_tags", "OpenComputers:keyboard"                , "PlaceLatest").getString();
-				config.get("block_tags", "StargateTech2:block.shieldEmitter"     , "PlaceLater NoMining").getString();
-				config.get("block_tags", "StargateTech2:block.shieldController"  , "PlaceNormal NoMining").getString();
-				config.get("block_tags", "StargateTech2:block.shield"            , "PlaceNormal NoMining").getString();
-				config.get("block_tags", "StargateTech2:block.busAdapter"        , "PlaceLatest NoMining").getString();
-				config.get("block_tags", "StargateTech2:block.busCable"          , "PlaceNormal NoMining").getString();
+				config.get("block_tags", "minecraft:lever"                                 , "PlaceLatest").getString();
+				config.get("block_tags", "WarpDrive:blockHull1_plain"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockHull2_plain"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockHull3_plain"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockHull1_glass"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockHull2_glass"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockHull3_glass"                      , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "WarpDrive:blockForceField1"                      , "PlaceLatest StopMining NoMass").getString();
+				config.get("block_tags", "WarpDrive:blockForceField2"                      , "PlaceLatest StopMining NoMass").getString();
+				config.get("block_tags", "WarpDrive:blockForceField3"                      , "PlaceLatest StopMining NoMass").getString();
+				config.get("block_tags", "IC2:blockReinforcedFoam"                         , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "IC2:blockAlloy"                                  , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "IC2:blockAlloyGlass"                             , "PlaceEarliest StopMining").getString();
+				config.get("block_tags", "minecraft:obsidian"                              , "PlaceEarliest Mining").getString();
+				config.get("block_tags", "AdvancedRepulsionSystems:field"                  , "PlaceEarlier StopMining").getString();
+				// config.get("block_tags", "MFFS:field"                                      , "PlaceEarlier StopMining"	).getString();
+				config.get("block_tags", "IC2:blockGenerator"                              , "PlaceLater").getString();
+				config.get("block_tags", "IC2:blockReactorChamber"                         , "PlaceLatest").getString();
+				config.get("block_tags", "ImmersiveEngineering:metalDevice"                , "PlaceLatest").getString();	// FIXME: need to fine tune at metadata level
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersDaylightSensor"  , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersDoor"            , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersGarageDoor"      , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersHatch"           , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersLadder"          , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersLever"           , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersPressurePlate"   , "PlaceLatest").getString();
+				config.get("block_tags", "CarpentersBlocks:blockCarpentersTorch"           , "PlaceLatest").getString();
+				// config.get("block_tags", "SGCraft:stargateBase"                            , "PlaceEarliest").getString();
+				// config.get("block_tags", "SGCraft:stargateBase"                            , "PlaceEarliest").getString();
+				// config.get("block_tags", "SGCraft:stargateRing"                            , "PlaceEarlier").getString();
+				// config.get("block_tags", "SGCraft:stargateController"                      , "PlaceLatest").getString();
+				config.get("block_tags", "OpenComputers:case1"                             , "PlaceLatest").getString();
+				config.get("block_tags", "OpenComputers:case2"                             , "PlaceLatest").getString(); 
+				config.get("block_tags", "OpenComputers:case3"                             , "PlaceLatest").getString(); 
+				config.get("block_tags", "OpenComputers:caseCreative"                      , "PlaceLatest").getString(); 
+				config.get("block_tags", "OpenComputers:keyboard"                          , "PlaceLatest").getString();
+				config.get("block_tags", "StargateTech2:block.shieldEmitter"               , "PlaceLater StopMining").getString();
+				config.get("block_tags", "StargateTech2:block.shieldController"            , "PlaceNormal StopMining").getString();
+				config.get("block_tags", "StargateTech2:block.shield"                      , "PlaceNormal StopMining").getString();
+				config.get("block_tags", "StargateTech2:block.busAdapter"                  , "PlaceLatest StopMining").getString();
+				config.get("block_tags", "StargateTech2:block.busCable"                    , "PlaceNormal StopMining").getString();
 				
-				// expandables, a.k.a. "don't blow my ship with this..."
-				config.get("block_tags", "WarpDrive:blockGas"                    , "LeftBehind Expandable").getString();
-				config.get("block_tags", "Railcraft:residual.heat"               , "LeftBehind Expandable").getString();
-				config.get("block_tags", "InvisibLights:blockLightSource"        , "NoMass Expandable").getString();
-				config.get("block_tags", "WarpDrive:blockAir"                    , "NoMass Expandable PlaceLatest").getString();
+				// expendables, a.k.a. "don't blow my ship with this..."
+				config.get("block_tags", "chisel:cloud"                                    , "LeftBehind Expandable").getString();
+				config.get("block_tags", "Railcraft:residual.heat"                         , "LeftBehind Expandable").getString();
+				config.get("block_tags", "WarpDrive:blockGas"                              , "LeftBehind Expandable").getString();
+				config.get("block_tags", "InvisibLights:blockLightSource"                  , "NoMass Expandable").getString();
+				config.get("block_tags", "WarpDrive:blockAir"                              , "NoMass Expandable PlaceLatest").getString();
 				
 				// mining a mineshaft...
-				config.get("block_tags", "minecraft:web"                         , "Mining").getString();
-				config.get("block_tags", "minecraft:fence"                       , "Mining").getString();
-				config.get("block_tags", "minecraft:torch"                       , "Mining").getString();
-				config.get("block_tags", "minecraft:glowstone"                   , "Mining").getString();
-				config.get("block_tags", "minecraft:redstone_block"              , "Mining").getString();
+				config.get("block_tags", "minecraft:web"                                   , "Mining").getString();
+				config.get("block_tags", "minecraft:fence"                                 , "Mining").getString();
+				config.get("block_tags", "minecraft:torch"                                 , "Mining").getString();
+				config.get("block_tags", "minecraft:glowstone"                             , "Mining").getString();
+				config.get("block_tags", "minecraft:redstone_block"                        , "Mining").getString();
 				
 				// mining an 'end' moon
-				config.get("block_tags", "WarpDrive:blockIridium"           , "Mining").getString();	// stronger than obsidian but can still be mined (see ender moon)
+				config.get("block_tags", "WarpDrive:blockIridium"                , "Mining").getString();	// stronger than obsidian but can still be mined (see ender moon)
+				
+				// force field camouflage blacklisting
+				config.get("block_tags", "deepresonance:energyCollectorBlock"          , "NoCamouflage").getString();
+				config.get("block_tags", "deepresonance:resonatingCrystalBlock"        , "NoCamouflage").getString();
+				config.get("block_tags", "evilcraft:bloodInfuser"                      , "NoCamouflage").getString();
+				config.get("block_tags", "evilcraft:darkOre"                           , "NoCamouflage").getString();
+				config.get("block_tags", "evilcraft:sanguinaryEnvironmentalAccumulator", "NoCamouflage").getString();
+				config.get("block_tags", "evilcraft:spiritReanimator"                  , "NoCamouflage").getString();
+				config.get("block_tags", "openmodularturrets:baseTierWood"             , "NoCamouflage").getString();
+				config.get("block_tags", "openmodularturrets:baseTierOneBlock"         , "NoCamouflage").getString();
+				config.get("block_tags", "openmodularturrets:baseTierTwoBlock"         , "NoCamouflage").getString();
+				config.get("block_tags", "openmodularturrets:baseTierThreeBlock"       , "NoCamouflage").getString();
+				config.get("block_tags", "openmodularturrets:baseTierFourBlock"        , "NoCamouflage").getString();
+				config.get("block_tags", "Thaumcraft:blockCustomPlant"                 , "NoCamouflage").getString();
+				config.get("block_tags", "ThermalExpansion:Cache"                      , "NoCamouflage").getString();
+				config.get("block_tags", "ThermalExpansion:Device"                     , "NoCamouflage").getString();
+				config.get("block_tags", "ThermalExpansion:Machine"                    , "NoCamouflage").getString();
+				config.get("block_tags", "ThermalExpansion:Sponge"                     , "NoCamouflage").getString();
+				config.get("block_tags", "witchery:leechchest"                         , "NoCamouflage").getString();
+				
 				taggedBlocksName = categoryBlockTags.getValues().keySet().toArray(new String[0]);
 			}
-			taggedBlocks = new HashMap(taggedBlocksName.length);
+			taggedBlocks = new HashMap<>(taggedBlocksName.length);
 			for (String name : taggedBlocksName) {
 				String tags = config.get("block_tags", name, "").getString();
 				taggedBlocks.put(name, tags);
@@ -177,7 +229,7 @@ public class Dictionary {
 				config.get("entity_tags", "IC2.Dynamite"                 , "NoMass NonLivingTarget").getString();
 				taggedEntitiesName = categoryEntityTags.getValues().keySet().toArray(new String[0]);
 			}
-			taggedEntities = new HashMap(taggedEntitiesName.length);
+			taggedEntities = new HashMap<>(taggedEntitiesName.length);
 			for (String name : taggedEntitiesName) {
 				String tags = config.get("entity_tags", name, "").getString();
 				taggedEntities.put(name, tags);
@@ -196,13 +248,24 @@ public class Dictionary {
 			ConfigCategory categoryItemTags = config.getCategory("item_tags");
 			String[] taggedItemsName = categoryItemTags.getValues().keySet().toArray(new String[0]);
 			if (taggedItemsName.length == 0) {
+				config.get("item_tags", "AWWayofTime:boundHelmet", "BreathingIC2").getString();
+				config.get("item_tags", "AWWayofTime:boundHelmetEarth", "BreathingIC2").getString();
+				config.get("item_tags", "AWWayofTime:boundHelmetFire", "BreathingIC2").getString();
+				config.get("item_tags", "AWWayofTime:boundHelmetWater", "BreathingIC2").getString();
+				config.get("item_tags", "AWWayofTime:boundHelmetWind", "BreathingIC2").getString();
+				config.get("item_tags", "AdvancedSolarPanel:advanced_solar_helmet", "BreathingIC2").getString();
+				config.get("item_tags", "AdvancedSolarPanel:hybrid_solar_helmet", "BreathingIC2").getString();
+				config.get("item_tags", "AdvancedSolarPanel:ultimate_solar_helmet", "BreathingIC2").getString();
+				config.get("item_tags", "Botania:elementiumHelm", "BreathingIC2").getString();
+				config.get("item_tags", "Botania:elementiumHelmReveal", "BreathingIC2").getString();
+				config.get("item_tags", "Botania:terrasteelHelm", "BreathingIC2").getString();
+				config.get("item_tags", "Botania:terrasteelHelmReveal", "BreathingIC2").getString();
+				config.get("item_tags", "EnderIO:item.darkSteel_helmet", "BreathingIC2").getString();
 				config.get("item_tags", "IC2:itemArmorHazmatHelmet", "BreathingIC2").getString();
 				config.get("item_tags", "IC2:itemSolarHelmet", "BreathingIC2").getString();
 				config.get("item_tags", "IC2:itemArmorNanoHelmet", "BreathingIC2").getString();
 				config.get("item_tags", "IC2:itemArmorQuantumHelmet", "BreathingIC2").getString();
-				config.get("item_tags", "AdvancedSolarPanel:advanced_solar_helmet", "BreathingIC2").getString();
-				config.get("item_tags", "AdvancedSolarPanel:hybrid_solar_helmet", "BreathingIC2").getString();
-				config.get("item_tags", "AdvancedSolarPanel:ultimate_solar_helmet", "BreathingIC2").getString();
+				config.get("item_tags", "RedstoneArsenal:armor.helmetFlux", "BreathingIC2").getString();
 				
 				config.get("item_tags", "IC2:itemArmorJetpack", "FlyInSpace NoFallDamage").getString();
 				config.get("item_tags", "IC2:itemArmorJetpackElectric", "FlyInSpace NoFallDamage").getString();
@@ -214,7 +277,7 @@ public class Dictionary {
 				config.get("item_tags", "IC2:itemArmorQuantumBoots", "NoFallDamage").getString();
 				taggedItemsName = categoryItemTags.getValues().keySet().toArray(new String[0]);
 			}
-			taggedItems = new HashMap(taggedItemsName.length);
+			taggedItems = new HashMap<>(taggedItemsName.length);
 			for (String name : taggedItemsName) {
 				String tags = config.get("item_tags", name, "").getString();
 				taggedItems.put(name, tags);
@@ -225,9 +288,9 @@ public class Dictionary {
 	
 	public static void apply() {
 		// get default settings from parsing ore dictionary
-		BLOCKS_ORES = new HashSet<Block>();
-		BLOCKS_LOGS = new HashSet<Block>();
-		BLOCKS_LEAVES = new HashSet<Block>();
+		BLOCKS_ORES = new HashSet<>();
+		BLOCKS_LOGS = new HashSet<>();
+		BLOCKS_LEAVES = new HashSet<>();
 		String[] oreNames = OreDictionary.getOreNames();
 		for (String oreName : oreNames) {
 			String lowerOreName = oreName.toLowerCase();
@@ -255,16 +318,18 @@ public class Dictionary {
 		}
 		
 		// translate tagged blocks
-		BLOCKS_SOILS = new HashSet(taggedBlocks.size());
-		BLOCKS_ANCHOR = new HashSet(taggedBlocks.size());
-		BLOCKS_NOMASS = new HashSet(taggedBlocks.size() + BLOCKS_LEAVES.size());
+		BLOCKS_SOILS = new HashSet<>(taggedBlocks.size());
+		BLOCKS_ANCHOR = new HashSet<>(taggedBlocks.size());
+		BLOCKS_NOMASS = new HashSet<>(taggedBlocks.size() + BLOCKS_LEAVES.size());
 		BLOCKS_NOMASS.addAll(BLOCKS_LEAVES);
-		BLOCKS_LEFTBEHIND = new HashSet(taggedBlocks.size());
-		BLOCKS_EXPANDABLE = new HashSet(taggedBlocks.size() + BLOCKS_LEAVES.size());
+		BLOCKS_LEFTBEHIND = new HashSet<>(taggedBlocks.size());
+		BLOCKS_EXPANDABLE = new HashSet<>(taggedBlocks.size() + BLOCKS_LEAVES.size());
 		BLOCKS_EXPANDABLE.addAll(BLOCKS_LEAVES);
-		BLOCKS_MINING = new HashSet(taggedBlocks.size());
-		BLOCKS_NOMINING = new HashSet(taggedBlocks.size());
-		BLOCKS_PLACE = new HashMap(taggedBlocks.size());
+		BLOCKS_MINING = new HashSet<>(taggedBlocks.size());
+		BLOCKS_SKIPMINING = new HashSet<>(taggedBlocks.size());
+		BLOCKS_STOPMINING = new HashSet<>(taggedBlocks.size());
+		BLOCKS_PLACE = new HashMap<>(taggedBlocks.size());
+		BLOCKS_NOCAMOUFLAGE = new HashSet<>(taggedBlocks.size());
 		for (Entry<String, String> taggedBlock : taggedBlocks.entrySet()) {
 			Block block = Block.getBlockFromName(taggedBlock.getKey());
 			if (block == null) {
@@ -281,12 +346,14 @@ public class Dictionary {
 				case "LeftBehind"   : BLOCKS_LEFTBEHIND.add(block); break;
 				case "Expandable"   : BLOCKS_EXPANDABLE.add(block); break;
 				case "Mining"       : BLOCKS_MINING.add(block); break;
-				case "NoMining"     : BLOCKS_NOMINING.add(block); break;
+				case "SkipMining"   : BLOCKS_SKIPMINING.add(block); break;
+				case "StopMining"   : BLOCKS_STOPMINING.add(block); break;
 				case "PlaceEarliest": BLOCKS_PLACE.put(block, 0); break;
 				case "PlaceEarlier" : BLOCKS_PLACE.put(block, 1); break;
 				case "PlaceNormal"  : BLOCKS_PLACE.put(block, 2); break;
 				case "PlaceLater"   : BLOCKS_PLACE.put(block, 3); break;
 				case "PlaceLatest"  : BLOCKS_PLACE.put(block, 4); break;
+				case "NoCamouflage" : BLOCKS_NOCAMOUFLAGE.add(block); break;
 				default:
 					WarpDrive.logger.error("Unsupported tag '" + tag + "' for block " + block);
 					break;
@@ -295,10 +362,10 @@ public class Dictionary {
 		}
 		
 		// translate tagged entities
-		ENTITIES_ANCHOR = new HashSet(taggedEntities.size());
-		ENTITIES_NOMASS = new HashSet(taggedEntities.size());
-		ENTITIES_LEFTBEHIND = new HashSet(taggedEntities.size());
-		ENTITIES_NONLIVINGTARGET = new HashSet(taggedEntities.size());
+		ENTITIES_ANCHOR = new HashSet<>(taggedEntities.size());
+		ENTITIES_NOMASS = new HashSet<>(taggedEntities.size());
+		ENTITIES_LEFTBEHIND = new HashSet<>(taggedEntities.size());
+		ENTITIES_NONLIVINGTARGET = new HashSet<>(taggedEntities.size());
 		for (Entry<String, String> taggedEntity : taggedEntities.entrySet()) {
 			String entityId = taggedEntity.getKey();
 			/* we can't detect missing entities, since some of them are 'hacked' in
@@ -321,9 +388,9 @@ public class Dictionary {
 		}
 		
 		// translate tagged items
-		ITEMS_FLYINSPACE = new HashSet(taggedItems.size());
-		ITEMS_NOFALLDAMAGE = new HashSet(taggedItems.size());
-		ITEMS_BREATHINGIC2 = new HashSet(taggedItems.size());
+		ITEMS_FLYINSPACE = new HashSet<>(taggedItems.size());
+		ITEMS_NOFALLDAMAGE = new HashSet<>(taggedItems.size());
+		ITEMS_BREATHINGIC2 = new HashSet<>(taggedItems.size());
 		for (Entry<String, String> taggedItem : taggedItems.entrySet()) {
 			String itemId = taggedItem.getKey();
 			Item item = GameData.getItemRegistry().getObject(itemId);
@@ -349,7 +416,7 @@ public class Dictionary {
 	
 	private static void print() {
 		// translate tagged blocks
-		WarpDrive.logger.info("Active blocks dictionnary:");
+		WarpDrive.logger.info("Active blocks dictionary:");
 		WarpDrive.logger.info("- " + BLOCKS_ORES.size() + " ores: " + getHashMessage(BLOCKS_ORES));
 		WarpDrive.logger.info("- " + BLOCKS_SOILS.size() + " soils: " + getHashMessage(BLOCKS_SOILS));
 		WarpDrive.logger.info("- " + BLOCKS_LOGS.size() + " logs: " + getHashMessage(BLOCKS_LOGS));
@@ -359,18 +426,19 @@ public class Dictionary {
 		WarpDrive.logger.info("- " + BLOCKS_LEFTBEHIND.size() + " with LeftBehind tag: " + getHashMessage(BLOCKS_LEFTBEHIND));
 		WarpDrive.logger.info("- " + BLOCKS_EXPANDABLE.size() + " expandable: " + getHashMessage(BLOCKS_EXPANDABLE));
 		WarpDrive.logger.info("- " + BLOCKS_MINING.size() + " with Mining tag: " + getHashMessage(BLOCKS_MINING));
-		WarpDrive.logger.info("- " + BLOCKS_NOMINING.size() + " with NoMining tag: " + getHashMessage(BLOCKS_NOMINING));
+		WarpDrive.logger.info("- " + BLOCKS_SKIPMINING.size() + " with SkipMining tag: " + getHashMessage(BLOCKS_SKIPMINING));
+		WarpDrive.logger.info("- " + BLOCKS_STOPMINING.size() + " with StopMining tag: " + getHashMessage(BLOCKS_STOPMINING));
 		WarpDrive.logger.info("- " + BLOCKS_PLACE.size() + " with Placement priority: " + getHashMessage(BLOCKS_PLACE));
 		
 		// translate tagged entities
-		WarpDrive.logger.info("Active entities dictionnary:");
+		WarpDrive.logger.info("Active entities dictionary:");
 		WarpDrive.logger.info("- " + ENTITIES_ANCHOR.size() + " anchors: " + getHashMessage(ENTITIES_ANCHOR));
 		WarpDrive.logger.info("- " + ENTITIES_NOMASS.size() + " with NoMass tag: " + getHashMessage(ENTITIES_NOMASS));
 		WarpDrive.logger.info("- " + ENTITIES_LEFTBEHIND.size() + " with LeftBehind tag: " + getHashMessage(ENTITIES_LEFTBEHIND));
 		WarpDrive.logger.info("- " + ENTITIES_NONLIVINGTARGET.size() + " with NonLivingTarget tag: " + getHashMessage(ENTITIES_NONLIVINGTARGET));
 		
 		// translate tagged items
-		WarpDrive.logger.info("Active items dictionnary:");
+		WarpDrive.logger.info("Active items dictionary:");
 		WarpDrive.logger.info("- " + ITEMS_FLYINSPACE.size() + " allowing fly in space: " + getHashMessage(ITEMS_FLYINSPACE));
 		WarpDrive.logger.info("- " + ITEMS_NOFALLDAMAGE.size() + " absorbing fall damages: " + getHashMessage(ITEMS_NOFALLDAMAGE));
 		WarpDrive.logger.info("- " + ITEMS_BREATHINGIC2.size() + " allowing breathing compressed air: " + getHashMessage(ITEMS_BREATHINGIC2));
@@ -387,19 +455,21 @@ public class Dictionary {
 		Blocks.lava.setResistance(30.0F);
 		Blocks.flowing_lava.setResistance(30.0F);
 		
-		// adjust IC2 Reinforced stone stats
+		// keep IC2 Reinforced stone stats 'as is'
+		/*
 		if (WarpDriveConfig.isIndustrialCraft2Loaded) {
 			Block blockReinforcedStone = (Block) Block.blockRegistry.getObject("IC2:blockAlloy");
-			// TODO
 		}
+		/**/
 		
 		// scan blocks registry
 		for(Object blockKey : Block.blockRegistry.getKeys()) {
-			Object block = Block.blockRegistry.getObject(blockKey);
-			WarpDrive.logger.debug("Checking block registry for '" + blockKey + "': " + block);
-			if (!(block instanceof Block)) {
-				WarpDrive.logger.error("Block registry for '" + blockKey + "': this is not a block? " + block);
+			Object object = Block.blockRegistry.getObject(blockKey);
+			WarpDrive.logger.debug("Checking block registry for '" + blockKey + "': " + object);
+			if (!(object instanceof Block)) {
+				WarpDrive.logger.error("Block registry for '" + blockKey + "': this is not a block? " + object);
 			} else {
+				Block block = (Block) object;
 				// get hardness and blast resistance
 				float hardness = -2.0F;
 				if (WarpDrive.fieldBlockHardness != null) {
@@ -412,32 +482,33 @@ public class Dictionary {
 					}
 				}
 				
-				float blastResistance = ((Block)block).getExplosionResistance(null);
+				float blastResistance = block.getExplosionResistance(null);
 				
 				// check actual values
 				if (hardness != -2.0F) {
 					if (hardness < 0 && !(BLOCKS_ANCHOR.contains(block))) {// unbreakable block
 						WarpDrive.logger.warn("Warning: non-anchor block with unbreakable hardness '" + blockKey + "' " + block + " (" + hardness + ")");
-					} else if (hardness > WarpDriveConfig.HULL_HARDNESS[0] && !(block instanceof BlockHullPlain || block instanceof BlockHullGlass || BLOCKS_ANCHOR.contains(block))) {
+					} else if ( hardness > WarpDriveConfig.HULL_HARDNESS[0]
+					         && !(block instanceof BlockHullPlain || block instanceof BlockHullGlass || block instanceof BlockHullStairs || BLOCKS_ANCHOR.contains(block)) ) {
 						WarpDrive.logger.warn("Warning: non-hull block with high hardness '" + blockKey + "' " + block + " (" + hardness + ")");
 					}
 				}
-				if (blastResistance > WarpDriveConfig.HULL_BLAST_RESISTANCE[0] && !(block instanceof BlockHullPlain || block instanceof BlockHullGlass || BLOCKS_ANCHOR.contains(block))) {
-					((Block)block).setResistance(WarpDriveConfig.HULL_BLAST_RESISTANCE[0]);
-					WarpDrive.logger.warn("Warning: non-anchor block with crazy blast resistance '" + blockKey + "' " + block + " (" + hardness + ")");
-					if (adjustResistance) {
-						WarpDrive.logger.warn("Adjusting blast resistance of '" + blockKey + "' " + block + " from " + blastResistance + " to " + ((Block)block).getExplosionResistance(null));
-						if (((Block)block).getExplosionResistance(null) > WarpDriveConfig.HULL_BLAST_RESISTANCE[0]) {
-							WarpDrive.logger.error("Blacklisting block with crazy blast resistance '" + blockKey + "' " + block + " (" + blastResistance + ")");
-							BLOCKS_ANCHOR.add((Block)block);
-							BLOCKS_NOMINING.add((Block)block);
+				if (blastResistance > WarpDriveConfig.HULL_BLAST_RESISTANCE[0] && !((block instanceof BlockHullPlain) || (block instanceof BlockHullGlass) || BLOCKS_ANCHOR.contains(block))) {
+					block.setResistance(WarpDriveConfig.HULL_BLAST_RESISTANCE[0]);
+					WarpDrive.logger.warn("Warning: non-anchor block with high blast resistance '" + blockKey + "' " + block + " (" + hardness + ")");
+					if (adjustResistance) {// TODO: not implemented
+						WarpDrive.logger.warn("Adjusting blast resistance of '" + blockKey + "' " + block + " from " + blastResistance + " to " + block.getExplosionResistance(null));
+						if (block.getExplosionResistance(null) > WarpDriveConfig.HULL_BLAST_RESISTANCE[0]) {
+							WarpDrive.logger.error("Blacklisting block with high blast resistance '" + blockKey + "' " + block + " (" + blastResistance + ")");
+							BLOCKS_ANCHOR.add(block);
+							BLOCKS_STOPMINING.add(block);
 						}
 					}
 				}
 				
 				if (WarpDriveConfig.LOGGING_DICTIONARY) {
 					WarpDrive.logger.info("Block registry for '" + blockKey + "': Block " + block
-						+ " with hardness " + (WarpDrive.fieldBlockHardness != null ? hardness : "-") + " resistance " + ((Block)block).getExplosionResistance(null));
+						+ " with hardness " + (WarpDrive.fieldBlockHardness != null ? hardness : "-") + " resistance " + block.getExplosionResistance(null));
 				}
 			}
 		}

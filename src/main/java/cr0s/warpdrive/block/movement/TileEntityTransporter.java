@@ -2,24 +2,20 @@ package cr0s.warpdrive.block.movement;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+import cr0s.warpdrive.item.ItemUpgrade;
 import li.cil.oc.api.machine.Arguments;
 import li.cil.oc.api.machine.Callback;
 import li.cil.oc.api.machine.Context;
 import cpw.mods.fml.common.Optional;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.ChatComponentText;
-import net.minecraft.util.DamageSource;
 import net.minecraft.util.StatCollector;
 import net.minecraftforge.common.util.ForgeDirection;
+import cr0s.warpdrive.DamageTeleportation;
 import cr0s.warpdrive.WarpDrive;
-import cr0s.warpdrive.api.IUpgradable;
 import cr0s.warpdrive.block.TileEntityAbstractEnergy;
 import cr0s.warpdrive.config.WarpDriveConfig;
 import cr0s.warpdrive.data.UpgradeType;
@@ -27,7 +23,7 @@ import cr0s.warpdrive.data.Vector3;
 import dan200.computercraft.api.lua.ILuaContext;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 
-public class TileEntityTransporter extends TileEntityAbstractEnergy implements IUpgradable {
+public class TileEntityTransporter extends TileEntityAbstractEnergy {
 	private double scanRange = 2;
 
 	private int scanDist = 4;
@@ -42,7 +38,7 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	private Vector3 sourceVec = new Vector3();
 	private Vector3 destVec = new Vector3();
 
-	private TeleporterDamage teleDam = new TeleporterDamage("teleporter");
+	private DamageTeleportation damageTeleportation = new DamageTeleportation();
 
 	public TileEntityTransporter() {
 		super();
@@ -62,6 +58,10 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 				"getEnergyRequired",
 				"upgrades"
 		});
+		
+		setUpgradeMaxCount(ItemUpgrade.getItemStack(UpgradeType.Energy), 2);
+		setUpgradeMaxCount(ItemUpgrade.getItemStack(UpgradeType.Power), 4);
+		setUpgradeMaxCount(ItemUpgrade.getItemStack(UpgradeType.Range), 4);
 	}
 
 	@Override
@@ -79,9 +79,7 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	
 	@Override
 	public String getStatus() {
-		return StatCollector.translateToLocalFormatted("warpdrive.guide.prefix",
-				getBlockType().getLocalizedName())
-				+ "\n" + getEnergyStatus()
+		return super.getStatus()
 				+ "\n" + StatCollector.translateToLocalFormatted("warpdrive.transporter.status",
 						sourceVec.x, sourceVec.y, sourceVec.z,
 						destVec.x, destVec.y, destVec.z);
@@ -167,30 +165,31 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	private static String helpStr(Object[] function) {
 		if (function != null && function.length > 0) {
 			String methodName = function[0].toString().toLowerCase();
-			if (methodName.equals("source")) {
-				if (WarpDriveConfig.TRANSPORTER_USE_RELATIVE_COORDS) {
-					return "source(x,y,z): sets the coordinates (relative to the transporter) to teleport from\ndest(): returns the relative x,y,z coordinates of the source";
-				} else {
-					return "source(x,y,z): sets the absolute coordinates to teleport from\ndest(): returns the x,y,z coordinates of the source";
-				}
-			} else if (methodName.equals("dest")) {
-				if (WarpDriveConfig.TRANSPORTER_USE_RELATIVE_COORDS) {
-					return "dest(x,y,z): sets the coordinates (relative to the transporter) to teleport to\ndest(): returns the relative x,y,z coordinates of the destination";
-				} else {
-					return "dest(x,y,z): sets the absolute coordinates to teleport to\ndest(): returns the x,y,z coordinates of the destination";
-				}
-			} else if (methodName.equals("lock")) {
-				return "lock(): locks the source and dest coordinates in and returns the lock strength (float)";
-			} else if (methodName.equals("release")) {
-				return "release(): releases the current lock";
-			} else if (methodName.equals("lockstrength")) {
-				return "lockStrength(): returns the current lock strength (float)";
-			} else if (methodName.equals("energize")) {
-				return "energize(): attempts to teleport all entities at source to dest. Returns the number of entities transported (-1 indicates a problem).";
-			} else if (methodName.equals("powerboost")) {
-				return "powerBoost(boostAmount): sets the level of power to use (1 being default), returns the level of power\npowerBoost(): returns the level of power";
-			} else if (methodName.equals("getEnergyRequired")) {
-				return "getEnergyRequired(): returns the amount of energy it will take for a single entity to transport with the current settings";
+			switch (methodName) {
+				case "source":
+					if (WarpDriveConfig.TRANSPORTER_USE_RELATIVE_COORDS) {
+						return "source(x,y,z): sets the coordinates (relative to the transporter) to teleport from\ndest(): returns the relative x,y,z coordinates of the source";
+					} else {
+						return "source(x,y,z): sets the absolute coordinates to teleport from\ndest(): returns the x,y,z coordinates of the source";
+					}
+				case "dest":
+					if (WarpDriveConfig.TRANSPORTER_USE_RELATIVE_COORDS) {
+						return "dest(x,y,z): sets the coordinates (relative to the transporter) to teleport to\ndest(): returns the relative x,y,z coordinates of the destination";
+					} else {
+						return "dest(x,y,z): sets the absolute coordinates to teleport to\ndest(): returns the x,y,z coordinates of the destination";
+					}
+				case "lock":
+					return "lock(): locks the source and dest coordinates in and returns the lock strength (float)";
+				case "release":
+					return "release(): releases the current lock";
+				case "lockstrength":
+					return "lockStrength(): returns the current lock strength (float)";
+				case "energize":
+					return "energize(): attempts to teleport all entities at source to dest. Returns the number of entities transported (-1 indicates a problem).";
+				case "powerboost":
+					return "powerBoost(boostAmount): sets the level of power to use (1 being default), returns the level of power\npowerBoost(): returns the level of power";
+				case "getEnergyRequired":
+					return "getEnergyRequired(): returns the amount of energy it will take for a single entity to transport with the current settings";
 			}
 		}
 		return null;
@@ -237,33 +236,34 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
 		
-		if (methodName.equals("source")) {
-			return setVec3(true, arguments);
-			
-		} else if (methodName.equals("dest")) {
-			return setVec3(false, arguments);
-			
-		} else if (methodName.equals("lock")) {
-			return new Object[] { lock(sourceVec, destVec) };
-			
-		} else if (methodName.equals("release")) {
-			unlock();
-			return null;
-			
-		} else if (methodName.equals("lockStrength")) {
-			return new Object[] { getLockStrength() };
-			
-		} else if (methodName.equals("energize")) {
-			return new Object[] { energize() };
-			
-		} else if (methodName.equals("powerBoost")) {
-			return new Object[] { powerBoost(arguments) };
-			
-		} else if (methodName.equals("getEnergyRequired")) {
-			return new Object[] { getEnergyRequired() };
-			
-		} else if (methodName.equals("help")) {
-			return new Object[] { helpStr(arguments) };
+		switch (methodName) {
+			case "source":
+				return setVec3(true, arguments);
+
+			case "dest":
+				return setVec3(false, arguments);
+
+			case "lock":
+				return new Object[]{lock(sourceVec, destVec)};
+
+			case "release":
+				unlock();
+				return null;
+
+			case "lockStrength":
+				return new Object[]{getLockStrength()};
+
+			case "energize":
+				return new Object[]{energize()};
+
+			case "powerBoost":
+				return new Object[]{powerBoost(arguments)};
+
+			case "getEnergyRequired":
+				return new Object[]{getEnergyRequired()};
+
+			case "help":
+				return new Object[]{helpStr(arguments)};
 		}
 		
 		return super.callMethod(computer, context, method, arguments);
@@ -303,7 +303,7 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 			}
 			Vector3 modDest = destVec.clone().translate(centreOnMe);
 			for (Entity ent : entitiesToTransport) {
-				if (consumeEnergy(energyRequired, false)) {
+				if (energy_consume(energyRequired, false)) {
 					if (WarpDriveConfig.LOGGING_TRANSPORTER) {
 						WarpDrive.logger.info(this + " Transporting entity " + ent.getEntityId());
 					}
@@ -347,15 +347,15 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 		}
 		
 		if (value < 0.1) {
-			ent.attackEntityFrom(teleDam, 1000);
+			ent.attackEntityFrom(damageTeleportation, 1000);
 		}
 
 		if (value < 0.2) {
-			ent.attackEntityFrom(teleDam, 10);
+			ent.attackEntityFrom(damageTeleportation, 10);
 		}
 
 		if (value < 0.5) {
-			ent.attackEntityFrom(teleDam, 1);
+			ent.attackEntityFrom(damageTeleportation, 1);
 		}
 	}
 
@@ -433,9 +433,8 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 
 	private double getLockStrength() {
 		if (isLocked) {
-			double upgradeBoost = 1;
-			if (upgrades.containsKey(UpgradeType.Range))
-				upgradeBoost = Math.pow(1.2, upgrades.get(UpgradeType.Range));
+			int rangeUgrades = getUpgradeCount(ItemUpgrade.getItemStack(UpgradeType.Range));
+			double upgradeBoost = Math.pow(1.2, rangeUgrades);
 			return clamp(0, 1, baseLockStrength * lockStrengthMul * Math.pow(2, powerBoost - 1) * upgradeBoost * (1 + beaconEffect));
 		}
 		return -1;
@@ -481,21 +480,21 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	private ArrayList<Entity> findEntities(Vector3 source, double lockStrength) {
 		AxisAlignedBB bb = getAABB();
 		if (WarpDriveConfig.LOGGING_TRANSPORTER) {
-			WarpDrive.logger.info(this + " Transporter:" + bb.toString());
+			WarpDrive.logger.info(this + " Transporter:" + bb);
 		}
 		List data = worldObj.getEntitiesWithinAABBExcludingEntity(null, bb);
-		ArrayList<Entity> output = new ArrayList<Entity>(data.size());
+		ArrayList<Entity> output = new ArrayList<>(data.size());
 		for (Object entity : data) {
 			if (lockStrength >= 1 || worldObj.rand.nextDouble() < lockStrength) {// If weak lock, don't transport
 				if (entity instanceof Entity) {
 					if (WarpDriveConfig.LOGGING_TRANSPORTER) {
-						WarpDrive.logger.info(this + " Entity '" + entity.toString() + "' found and added");
+						WarpDrive.logger.info(this + " Entity '" + entity + "' found and added");
 					}
 					output.add((Entity) entity);
 				}
 			} else {
 				if (WarpDriveConfig.LOGGING_TRANSPORTER) {
-					WarpDrive.logger.info(this + " Entity '" + entity.toString() + "' discarded");
+					WarpDrive.logger.info(this + " Entity '" + entity + "' discarded");
 				}
 			}
 		}
@@ -503,16 +502,14 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	}
 
 	@Override
-	public int getMaxEnergyStored() {
-		int max = WarpDriveConfig.TRANSPORTER_MAX_ENERGY_STORED;
-		if (upgrades.containsKey(UpgradeType.Energy)) {
-			max = (int) Math.floor(max * Math.pow(1.2, upgrades.get(UpgradeType.Energy)));
-		}
+	public int energy_getMaxStorage() {
+		int energyUgrades = getUpgradeCount(ItemUpgrade.getItemStack(UpgradeType.Energy));
+		int max = (int) Math.floor(WarpDriveConfig.TRANSPORTER_MAX_ENERGY_STORED * Math.pow(1.2, energyUgrades));
 		return max;
 	}
 
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		if (from == ForgeDirection.UP) {
 			return false;
 		}
@@ -529,57 +526,5 @@ public class TileEntityTransporter extends TileEntityAbstractEnergy implements I
 	public void readFromNBT(NBTTagCompound tag) {
 		super.readFromNBT(tag);
 		powerBoost = tag.getDouble("powerBoost");
-	}
-
-	class TeleporterDamage extends DamageSource {
-		protected TeleporterDamage(String par1Str) {
-			super(par1Str);
-		}
-
-		@Override
-		public ChatComponentText func_151519_b(EntityLivingBase entity) {
-			String message = "";
-			if (entity instanceof EntityPlayer || entity instanceof EntityPlayerMP) {
-				message = ((EntityPlayer) entity).getDisplayName() + " was killed by a teleporter malfunction";
-			} else {
-				message = entity.toString() + " was killed by a teleporter malfunction";
-			}
-
-			if (WarpDriveConfig.LOGGING_TRANSPORTER) {
-				WarpDrive.logger.info(message);
-			}
-			return new ChatComponentText(message);
-		}
-	}
-
-	@Override
-	public boolean takeUpgrade(UpgradeType upgradeType, boolean simulate) {
-		int max = 0;
-		if (upgradeType == UpgradeType.Energy)
-			max = 2;
-		else if (upgradeType == UpgradeType.Power)
-			max = 4;
-		else if (upgradeType == UpgradeType.Range)
-			max = 4;
-
-		if (max == 0)
-			return false;
-
-		if (upgrades.containsKey(upgradeType))
-			if (upgrades.get(upgradeType) >= max)
-				return false;
-
-		if (!simulate) {
-			int c = 0;
-			if (upgrades.containsKey(upgradeType))
-				c = upgrades.get(upgradeType);
-			upgrades.put(upgradeType, c + 1);
-		}
-		return true;
-	}
-
-	@Override
-	public Map<UpgradeType, Integer> getInstalledUpgrades() {
-		return upgrades;
 	}
 }

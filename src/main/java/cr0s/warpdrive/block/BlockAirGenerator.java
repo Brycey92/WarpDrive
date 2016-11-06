@@ -2,8 +2,6 @@ package cr0s.warpdrive.block;
 
 import java.util.Random;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.item.EntityItem;
@@ -18,16 +16,15 @@ import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.api.IAirCanister;
 import cr0s.warpdrive.config.WarpDriveConfig;
 
-public class BlockAirGenerator extends BlockContainer {
+public class BlockAirGenerator extends BlockAbstractContainer {
 	private IIcon[] iconBuffer;
 	
-	private final int ICON_INACTIVE_SIDE = 0, ICON_BOTTOM = 1, ICON_SIDE_ACTIVATED = 2;
+	private static final int ICON_INACTIVE_SIDE = 0;
+	private static final int ICON_BOTTOM = 1;
+	private static final int ICON_SIDE_ACTIVATED = 2;
 	
 	public BlockAirGenerator() {
-		super(Material.rock);
-		setHardness(0.5F);
-		setStepSound(Block.soundTypeMetal);
-		setCreativeTab(WarpDrive.creativeTabWarpDrive);
+		super(Material.iron);
 		setBlockName("warpdrive.machines.AirGenerator");
 	}
 	
@@ -41,6 +38,7 @@ public class BlockAirGenerator extends BlockContainer {
 	
 	@Override
 	public IIcon getIcon(int side, int metadata) {
+		/*
 		if (side == 0) {
 			return iconBuffer[ICON_BOTTOM];
 		} else if (side == 1) {
@@ -50,6 +48,7 @@ public class BlockAirGenerator extends BlockContainer {
 				return iconBuffer[ICON_SIDE_ACTIVATED];
 			}
 		}
+		/**/
 		
 		if (metadata == 0) { // Inactive state
 			return iconBuffer[ICON_INACTIVE_SIDE];
@@ -98,7 +97,7 @@ public class BlockAirGenerator extends BlockContainer {
 				Item heldItem = heldItemStack.getItem();
 				if (heldItem != null && (heldItem instanceof IAirCanister)) {
 					IAirCanister airCanister = (IAirCanister) heldItem;
-					if (airCanister.canContainAir(heldItemStack) && airGenerator.consumeEnergy(WarpDriveConfig.AIRGEN_ENERGY_PER_CANISTER, true)) {
+					if (airCanister.canContainAir(heldItemStack) && airGenerator.energy_consume(WarpDriveConfig.AIRGEN_ENERGY_PER_CANISTER, true)) {
 						entityPlayer.inventory.decrStackSize(entityPlayer.inventory.currentItem, 1);
 						ItemStack toAdd = airCanister.fullDrop(heldItemStack);
 						if (toAdd != null) {
@@ -107,7 +106,7 @@ public class BlockAirGenerator extends BlockContainer {
 								entityPlayer.worldObj.spawnEntityInWorld(ie);
 							}
 							((EntityPlayerMP)entityPlayer).sendContainerToPlayer(entityPlayer.inventoryContainer);
-							airGenerator.consumeEnergy(WarpDriveConfig.AIRGEN_ENERGY_PER_CANISTER, false);
+							airGenerator.energy_consume(WarpDriveConfig.AIRGEN_ENERGY_PER_CANISTER, false);
 						}
 					}
 				}

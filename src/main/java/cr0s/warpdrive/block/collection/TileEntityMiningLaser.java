@@ -31,20 +31,18 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	private int layerOffset = 1;
 	private boolean mineAllBlocks = true;
 	
-	private int delayTicksWarmup = 0;
-	private int delayTicksScan = 0;
-	private int delayTicksMine = 0;
+	private int delayTicks = 0;
 	
-	private final int STATE_IDLE = 0;
-	private final int STATE_WARMUP = 1;
-	private final int STATE_SCANNING = 2;
-	private final int STATE_MINING = 3;
+	private static final int STATE_IDLE = 0;
+	private static final int STATE_WARMUP = 1;
+	private static final int STATE_SCANNING = 2;
+	private static final int STATE_MINING = 3;
 	private int currentState = 0;
 	
 	private boolean enoughPower = false;
 	private int currentLayer;
 	
-	private ArrayList<VectorI> valuablesInLayer = new ArrayList<VectorI>();
+	private final ArrayList<VectorI> valuablesInLayer = new ArrayList<>();
 	private int valuableIndex = 0;
 	
 	public TileEntityMiningLaser() {
@@ -63,6 +61,7 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		laserMediumMaxCount = WarpDriveConfig.MINING_LASER_MAX_MEDIUMS_COUNT;
 	}
 	
+	@SuppressWarnings("UnnecessaryReturnStatement")
 	@Override
 	public void updateEntity() {
 		super.updateEntity();
@@ -72,9 +71,7 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		}
 		
 		if (currentState == STATE_IDLE) {
-			delayTicksWarmup = 0;
-			delayTicksScan = 0;
-			delayTicksMine = 0;
+			delayTicks = WarpDriveConfig.MINING_LASER_WARMUP_DELAY_TICKS;
 			updateMetadata(BlockMiningLaser.ICON_IDLE);
 			
 			// force start if no computer control is available
@@ -82,49 +79,49 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				enableSilktouch = false;
 				layerOffset = 1;
 				mineAllBlocks = true;
-				start(null);
+				start();
 			}
 			return;
 		}
 		
-		boolean isOnEarth = (worldObj.provider.dimensionId == 0);
+		boolean isOnEarth = isOnPlanet();
 		
+		delayTicks--;
 		if (currentState == STATE_WARMUP) {
-			delayTicksWarmup++;
-			updateMetadata(BlockMiningLaser.ICON_SCANNINGLOWPOWER);
-			if (delayTicksWarmup >= WarpDriveConfig.MINING_LASER_WARMUP_DELAY_TICKS) {
-				delayTicksScan = 0;
+			updateMetadata(BlockMiningLaser.ICON_SCANNING_LOW_POWER);
+			if (delayTicks < 0) {
+				delayTicks = WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS;
 				currentState = STATE_SCANNING;
-				updateMetadata(BlockMiningLaser.ICON_SCANNINGLOWPOWER);
+				updateMetadata(BlockMiningLaser.ICON_SCANNING_LOW_POWER);
 				return;
 			}
+			
 		} else if (currentState == STATE_SCANNING) {
-			delayTicksScan++;
-			if (delayTicksScan == 1) {
+			if (delayTicks == WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS - 1) {
 				// check power level
 				enoughPower = consumeEnergyFromLaserMediums(isOnEarth ? WarpDriveConfig.MINING_LASER_PLANET_ENERGY_PER_LAYER : WarpDriveConfig.MINING_LASER_SPACE_ENERGY_PER_LAYER, true);
 				if (!enoughPower) {
-					updateMetadata(BlockMiningLaser.ICON_SCANNINGLOWPOWER);
-					delayTicksScan = 0;
+					updateMetadata(BlockMiningLaser.ICON_SCANNING_LOW_POWER);
+					delayTicks = WarpDriveConfig.MINING_LASER_WARMUP_DELAY_TICKS;
 					return;
 				} else {
-					updateMetadata(BlockMiningLaser.ICON_SCANNINGPOWERED);
+					updateMetadata(BlockMiningLaser.ICON_SCANNING_POWERED);
 				}
 				
 				// show current layer
 				int age = Math.max(40, 5 * WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS);
-				double xmax = xCoord + WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 1.0D;
-				double xmin = xCoord - WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 0.0D;
-				double zmax = zCoord + WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 1.0D;
-				double zmin = zCoord - WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 0.0D;
+				double xMax = xCoord + WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 1.0D;
+				double xMin = xCoord - WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 0.0D;
+				double zMax = zCoord + WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 1.0D;
+				double zMin = zCoord - WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS + 0.0D;
 				double y = currentLayer + 1.0D;
-				PacketHandler.sendBeamPacket(worldObj, new Vector3(xmin, y, zmin), new Vector3(xmax, y, zmin), 0.3F, 0.0F, 1.0F, age, 0, 50);
-				PacketHandler.sendBeamPacket(worldObj, new Vector3(xmax, y, zmin), new Vector3(xmax, y, zmax), 0.3F, 0.0F, 1.0F, age, 0, 50);
-				PacketHandler.sendBeamPacket(worldObj, new Vector3(xmax, y, zmax), new Vector3(xmin, y, zmax), 0.3F, 0.0F, 1.0F, age, 0, 50);
-				PacketHandler.sendBeamPacket(worldObj, new Vector3(xmin, y, zmax), new Vector3(xmin, y, zmin), 0.3F, 0.0F, 1.0F, age, 0, 50);
+				PacketHandler.sendBeamPacket(worldObj, new Vector3(xMin, y, zMin), new Vector3(xMax, y, zMin), 0.3F, 0.0F, 1.0F, age, 0, 50);
+				PacketHandler.sendBeamPacket(worldObj, new Vector3(xMax, y, zMin), new Vector3(xMax, y, zMax), 0.3F, 0.0F, 1.0F, age, 0, 50);
+				PacketHandler.sendBeamPacket(worldObj, new Vector3(xMax, y, zMax), new Vector3(xMin, y, zMax), 0.3F, 0.0F, 1.0F, age, 0, 50);
+				PacketHandler.sendBeamPacket(worldObj, new Vector3(xMin, y, zMax), new Vector3(xMin, y, zMin), 0.3F, 0.0F, 1.0F, age, 0, 50);
 				
-			} else if (delayTicksScan >= WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS) {
-				delayTicksScan = 0;
+			} else if (delayTicks < 0) {
+				delayTicks = WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS;
 				if (currentLayer <= 0) {
 					stop();
 					return;
@@ -133,15 +130,16 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				// consume power
 				enoughPower = consumeEnergyFromLaserMediums(isOnEarth ? WarpDriveConfig.MINING_LASER_PLANET_ENERGY_PER_LAYER : WarpDriveConfig.MINING_LASER_SPACE_ENERGY_PER_LAYER, false);
 				if (!enoughPower) {
-					updateMetadata(BlockMiningLaser.ICON_SCANNINGLOWPOWER);
+					updateMetadata(BlockMiningLaser.ICON_SCANNING_LOW_POWER);
+					delayTicks = WarpDriveConfig.MINING_LASER_WARMUP_DELAY_TICKS;
 					return;
 				} else {
-					updateMetadata(BlockMiningLaser.ICON_SCANNINGPOWERED);
+					updateMetadata(BlockMiningLaser.ICON_SCANNING_POWERED);
 				}
 				
 				// scan
 				scanLayer();
-				if (valuablesInLayer.size() > 0) {
+				if (!valuablesInLayer.isEmpty()) {
 					int r = (int) Math.ceil(WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS / 2.0D);
 					int offset = (yCoord - currentLayer) % (2 * r);
 					int age = Math.max(20, Math.round(2.5F * WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS));
@@ -155,9 +153,10 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 					PacketHandler.sendBeamPacket(worldObj, laserOutput, new Vector3(xCoord - r, y, zCoord - r + offset).translate(0.3D),
 							0.0F, 0.0F, 1.0F, age, 0, 50);
 					worldObj.playSoundEffect(xCoord + 0.5f, yCoord, zCoord + 0.5f, "warpdrive:hilaser", 4F, 1F);
-					delayTicksMine = 0;
+					
+					delayTicks = WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS;
 					currentState = STATE_MINING;
-					updateMetadata(BlockMiningLaser.ICON_MININGPOWERED);
+					updateMetadata(BlockMiningLaser.ICON_MINING_POWERED);
 					return;
 					
 				} else {
@@ -166,14 +165,13 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				}
 			}
 		} else if (currentState == STATE_MINING) {
-			delayTicksMine++;
-			if (delayTicksMine >= WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS) {
-				delayTicksMine = 0;
+			if (delayTicks < 0) {
+				delayTicks = WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS;
 				
-				if (valuableIndex >= valuablesInLayer.size()) {
-					delayTicksScan = 0;
+				if (valuableIndex < 0 || valuableIndex >= valuablesInLayer.size()) {
+					delayTicks = WarpDriveConfig.MINING_LASER_SCAN_DELAY_TICKS;
 					currentState = STATE_SCANNING;
-					updateMetadata(BlockMiningLaser.ICON_SCANNINGPOWERED);
+					updateMetadata(BlockMiningLaser.ICON_SCANNING_POWERED);
 					
 					// rescan same layer
 					scanLayer();
@@ -193,10 +191,10 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				}
 				enoughPower = consumeEnergyFromLaserMediums(requiredPower, false);
 				if (!enoughPower) {
-					updateMetadata(BlockMiningLaser.ICON_MININGLOWPOWER);
+					updateMetadata(BlockMiningLaser.ICON_MINING_LOW_POWER);
 					return;
 				} else {
-					updateMetadata(BlockMiningLaser.ICON_MININGPOWERED);
+					updateMetadata(BlockMiningLaser.ICON_MINING_POWERED);
 				}
 				
 				VectorI valuable = valuablesInLayer.get(valuableIndex);
@@ -207,7 +205,8 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				
 				// Skip if block is too hard or its empty block (check again in case it changed)
 				if (!canDig(block, valuable.x, valuable.y, valuable.z)) {
-					delayTicksMine = Math.round(WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS * 0.8F);
+					delayTicks = Math.round(WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS * 0.2F);
+					return;
 				}
 				int age = Math.max(10, Math.round((4 + worldObj.rand.nextFloat()) * WarpDriveConfig.MINING_LASER_MINE_DELAY_TICKS));
 				PacketHandler.sendBeamPacket(worldObj, laserOutput, new Vector3(valuable.x, valuable.y, valuable.z).translate(0.5D),
@@ -230,33 +229,58 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		if (worldObj.isAirBlock(x, y, z)) {
 			return false;
 		}
-		// check blacklist
-		if (Dictionary.BLOCKS_NOMINING.contains(block)) {
+		// check blacklists
+		if (Dictionary.BLOCKS_SKIPMINING.contains(block)) {
+			return false;
+		}
+		if (Dictionary.BLOCKS_STOPMINING.contains(block)) {
 			stop();
+			if (WarpDriveConfig.LOGGING_COLLECTION) {
+				WarpDrive.logger.info(this + " Mining stopped by " + block + " at (" + x + " " + y + " " + z + ")");
+			}
 			return false;
 		}
 		// check whitelist
 		if (Dictionary.BLOCKS_MINING.contains(block) || Dictionary.BLOCKS_ORES.contains(block)) {
 			return true;
 		}
+		// check area protection
+		if (isBlockBreakCanceled(null, worldObj, x, y, z)) {
+			stop();
+			if (WarpDriveConfig.LOGGING_COLLECTION) {
+				WarpDrive.logger.info(this + " Mining stopped by cancelled event at (" + x + " " + y + " " + z + ")");
+			}
+			return false;
+		}
 		// check default (explosion resistance is used to test for force fields and reinforced blocks, basically preventing mining a base or ship) 
 		if (block.getExplosionResistance(null) <= Blocks.obsidian.getExplosionResistance(null)) {
 			return true;
 		}
 		if (WarpDriveConfig.LOGGING_COLLECTION) {
-			WarpDrive.logger.info(this + " Rejecting " + block + " at (" + x + ", " + y + ", " + z + ")");
+			WarpDrive.logger.info(this + " Rejecting " + block + " at (" + x + " " + y + " " + z + ")");
 		}
 		return false;
 	}
 	
 	private void scanLayer() {
 		// WarpDrive.logger.info("Scanning layer");
+		Block block;
+		for (int y = yCoord - 1; y > currentLayer; y --) {
+			block = worldObj.getBlock(xCoord, y, zCoord);
+			if (Dictionary.BLOCKS_STOPMINING.contains(block)) {
+				stop();
+				if (WarpDriveConfig.LOGGING_COLLECTION) {
+					WarpDrive.logger.info(this + " Mining stopped by " + block + " at (" + xCoord + " " + y + " " + zCoord + ")");
+				}
+				return;
+			}
+		}
+
 		valuablesInLayer.clear();
 		valuableIndex = 0;
 		int radius, x, z;
-		Block block;
-		int xmax, zmax;
-		int xmin, zmin;
+		int xMax, zMax;
+		int xMin, zMin;
 		
 		// Search for valuable blocks
 		x = xCoord;
@@ -268,13 +292,13 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 			}
 		}
 		for (radius = 1; radius <= WarpDriveConfig.MINING_LASER_RADIUS_BLOCKS; radius++) {
-			xmax = xCoord + radius;
-			xmin = xCoord - radius;
-			zmax = zCoord + radius;
-			zmin = zCoord - radius;
+			xMax = xCoord + radius;
+			xMin = xCoord - radius;
+			zMax = zCoord + radius;
+			zMin = zCoord - radius;
 			x = xCoord;
-			z = zmin;
-			for (; x <= xmax; x++) {
+			z = zMin;
+			for (; x <= xMax; x++) {
 				block = worldObj.getBlock(x, currentLayer, z);
 				if (canDig(block, x, currentLayer, z)) {
 					if (mineAllBlocks || Dictionary.BLOCKS_ORES.contains(block)) {// Quarry collects all blocks or only collect valuables blocks
@@ -282,9 +306,9 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 					}
 				}
 			}
-			x = xmax;
+			x = xMax;
 			z++;
-			for (; z <= zmax; z++) {
+			for (; z <= zMax; z++) {
 				block = worldObj.getBlock(x, currentLayer, z);
 				if (canDig(block, x, currentLayer, z)) {
 					if (mineAllBlocks || Dictionary.BLOCKS_ORES.contains(block)) {// Quarry collects all blocks or only collect valuables blocks
@@ -293,8 +317,8 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 				}
 			}
 			x--;
-			z = zmax;
-			for (; x >= xmin; x--) {
+			z = zMax;
+			for (; x >= xMin; x--) {
 				block = worldObj.getBlock(x, currentLayer, z);
 				if (canDig(block, x, currentLayer, z)) {
 					if (mineAllBlocks || Dictionary.BLOCKS_ORES.contains(block)) {// Quarry collects all blocks or only collect valuables blocks
@@ -302,9 +326,9 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 					}
 				}
 			}
-			x = xmin;
+			x = xMin;
 			z--;
-			for (; z > zmin; z--) {
+			for (; z > zMin; z--) {
 				block = worldObj.getBlock(x, currentLayer, z);
 				if (canDig(block, x, currentLayer, z)) {
 					if (mineAllBlocks || Dictionary.BLOCKS_ORES.contains(block)) {// Quarry collects all blocks or only collect valuables blocks
@@ -312,8 +336,8 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 					}
 				}
 			}
-			x = xmin;
-			z = zmin;
+			x = xMin;
+			z = zMin;
 			for (; x < xCoord; x++) {
 				block = worldObj.getBlock(x, currentLayer, z);
 				if (canDig(block, x, currentLayer, z)) {
@@ -336,9 +360,6 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		mineAllBlocks = tag.getBoolean("mineAllBlocks");
 		currentState = tag.getInteger("currentState");
 		currentLayer = tag.getInteger("currentLayer");
-		if (currentState == STATE_MINING) {
-			scanLayer();
-		}
 	}
 	
 	@Override
@@ -354,9 +375,10 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] start(Context context, Arguments arguments) {
-		return start(argumentsOCtoCC(arguments));
+		return start();
 	}
 	
+	@SuppressWarnings("SameReturnValue")
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] stop(Context context, Arguments arguments) {
@@ -367,7 +389,7 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	@Callback
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] state(Context context, Arguments arguments) {
-		return state(argumentsOCtoCC(arguments));
+		return state();
 	}
 	
 	@Callback
@@ -389,19 +411,22 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	}
 	
 	// Common OC/CC methods
-	private Object[] start(Object[] arguments) {
+	private Object[] start() {
 		if (isActive()) {
 			return new Object[] { false, "Already started" };
 		}
 		
 		enableSilktouch &= canSilktouch;
-		delayTicksWarmup = 0;
+		delayTicks = WarpDriveConfig.MINING_LASER_WARMUP_DELAY_TICKS;
 		currentState = STATE_WARMUP;
 		currentLayer = yCoord - layerOffset - 1;
+		if (WarpDriveConfig.LOGGING_LUA) {
+			WarpDrive.logger.info(this + " Starting from Y " + currentLayer + " with silktouch " + enableSilktouch);
+		}
 		return new Boolean[] { true };
 	}
 	
-	private Object[] state(Object[] arguments) {
+	private Object[] state() {
 		int energy = getEnergyStored();
 		String status = getStatus();
 		Integer retValuablesInLayer, retValuablesMined;
@@ -418,6 +443,10 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		if (arguments.length == 1) {
 			try {
 				mineAllBlocks = ! toBool(arguments[0]);
+				markDirty();
+				if (WarpDriveConfig.LOGGING_LUA) {
+					WarpDrive.logger.info(this + " onlyOres set to " + !mineAllBlocks);
+				}
 			} catch (Exception exception) {
 				return new Object[] { !mineAllBlocks };
 			}
@@ -429,6 +458,10 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 		if (arguments.length == 1) {
 			try {
 				layerOffset = Math.min(256, Math.abs(toInt(arguments[0])));
+				markDirty();
+				if (WarpDriveConfig.LOGGING_LUA) {
+					WarpDrive.logger.info(this + " offset set to " + layerOffset);
+				}
 			} catch (Exception exception) {
 				return new Integer[] { layerOffset };
 			}
@@ -439,7 +472,11 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	private Object[] silktouch(Object[] arguments) {
 		if (arguments.length == 1) {
 			try {
-				enableSilktouch = ! toBool(arguments[0]);
+				enableSilktouch = toBool(arguments[0]);
+				markDirty();
+				if (WarpDriveConfig.LOGGING_LUA) {
+					WarpDrive.logger.info(this + " silktouch set to " + enableSilktouch);
+				}
 			} catch (Exception exception) {
 				return new Object[] { enableSilktouch };
 			}
@@ -453,30 +490,33 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	public Object[] callMethod(IComputerAccess computer, ILuaContext context, int method, Object[] arguments) {
 		String methodName = getMethodName(method);
 		
-		if (methodName.equals("start")) {
-			return start(arguments);
-			
-		} else if (methodName.equals("stop")) {
-			stop();
-			return null;
-			
-		} else if (methodName.equals("state")) {
-			return state(arguments);
-			
-		} else if (methodName.equals("offset")) {
-			return offset(arguments);
-			
-		} else if (methodName.equals("onlyOres")) {
-			return onlyOres(arguments);
-			
-		} else if (methodName.equals("silktouch")) {
-			return silktouch(arguments);
+		switch (methodName) {
+			case "start":
+				return start();
+
+			case "stop":
+				stop();
+				return null;
+
+			case "state":
+				return state();
+
+			case "offset":
+				return offset(arguments);
+
+			case "onlyOres":
+				return onlyOres(arguments);
+
+			case "silktouch":
+				return silktouch(arguments);
 		}
 		
 		return super.callMethod(computer, context, method, arguments);
 	}
 	
+	@Override
 	public String getStatus() {
+		// @TODO merge with base
 		int energy = getEnergyStored();
 		String state = "IDLE (not mining)";
 		if (currentState == STATE_IDLE) {
@@ -510,7 +550,6 @@ public class TileEntityMiningLaser extends TileEntityAbstractMiner {
 	@Override
 	public String toString() {
 		return String.format("%s @ \'%s\' %d, %d, %d",
-				new Object[] { getClass().getSimpleName(), worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(), Integer.valueOf(xCoord),
-						Integer.valueOf(yCoord), Integer.valueOf(zCoord) });
+			getClass().getSimpleName(), worldObj == null ? "~NULL~" : worldObj.getWorldInfo().getWorldName(), xCoord, yCoord, zCoord);
 	}
 }

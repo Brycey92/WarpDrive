@@ -1,29 +1,33 @@
 package cr0s.warpdrive.block.movement;
 
+import java.util.ArrayList;
 import java.util.Random;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockContainer;
+import cr0s.warpdrive.data.EnumComponentType;
+import cr0s.warpdrive.item.ItemComponent;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.item.EntityTNTPrimed;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 import cr0s.warpdrive.WarpDrive;
+import cr0s.warpdrive.block.BlockAbstractContainer;
 
-public class BlockShipCore extends BlockContainer {
+public class BlockShipCore extends BlockAbstractContainer {
 	private IIcon[] iconBuffer;
 	
-	private final int ICON_SIDE_INACTIVE = 0, ICON_BOTTOM = 1, ICON_TOP = 2, ICON_SIDE_ACTIVATED = 3, ICON_SIDE_HEATED = 4;
+	private static final int ICON_BOTTOM = 1;
+	private static final int ICON_SIDE_INACTIVE = 0;
+	private static final int ICON_TOP = 2;
+	private static final int ICON_SIDE_ACTIVATED = 3;
+	private static final int ICON_SIDE_HEATED = 4;
 	
 	public BlockShipCore() {
-		super(Material.rock);
-		setHardness(0.5F);
-		setStepSound(Block.soundTypeMetal);
-		setCreativeTab(WarpDrive.creativeTabWarpDrive);
+		super(Material.iron);
 		setBlockName("warpdrive.movement.ShipCore");
 	}
 	
@@ -74,25 +78,51 @@ public class BlockShipCore extends BlockContainer {
 		return new TileEntityShipCore();
 	}
 	
-	/**
-	 * Returns the quantity of items to drop on block destruction.
-	 */
 	@Override
 	public int quantityDropped(Random par1Random) {
 		return 1;
 	}
 	
-	/**
-	 * Returns the ID of the items to drop on destruction.
-	 */
 	@Override
-	public Item getItemDropped(int par1, Random par2Random, int par3) {
-		return Item.getItemFromBlock(this);
+	public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
+		TileEntity tileEntity = world.getTileEntity(x, y, z);
+		if (tileEntity instanceof TileEntityShipCore) {
+			if (((TileEntityShipCore)tileEntity).jumpCount == 0) {
+				return super.getDrops(world, x, y, z, metadata, fortune);
+			}
+		}
+		// trigger explosion
+		EntityTNTPrimed entityTNTPrimed = new EntityTNTPrimed(world, x + 0.5F, y + 0.5F, z + 0.5F, null);
+		entityTNTPrimed.fuse = 10 + world.rand.nextInt(10);
+		world.spawnEntityInWorld(entityTNTPrimed);
+		
+		// get a chance to get the drops
+		ArrayList<ItemStack> itemStacks = new ArrayList<>();
+		itemStacks.add(ItemComponent.getItemStackNoCache(EnumComponentType.CAPACITIVE_CRYSTAL, 1));
+		if (fortune > 0 && world.rand.nextBoolean()) {
+			itemStacks.add(ItemComponent.getItemStackNoCache(EnumComponentType.CAPACITIVE_CRYSTAL, 1));
+		}
+		if (fortune > 1 && world.rand.nextBoolean()) {
+			itemStacks.add(ItemComponent.getItemStackNoCache(EnumComponentType.CAPACITIVE_CRYSTAL, 1));
+		}
+		if (fortune > 1 & world.rand.nextBoolean()) {
+			itemStacks.add(ItemComponent.getItemStackNoCache(EnumComponentType.POWER_INTERFACE, 1));
+		}
+		return itemStacks;
 	}
 	
-	/**
-	 * Called upon block activation (right click on the block.)
-	 */
+	@Override
+	public float getPlayerRelativeBlockHardness(EntityPlayer entityPlayer, World world, int x, int y, int z) {
+		boolean willBreak = true;
+		TileEntity tileEntity = world.getTileEntity(x, y, z);
+		if (tileEntity instanceof TileEntityShipCore) {
+			if (((TileEntityShipCore)tileEntity).jumpCount == 0) {
+				willBreak = false;
+			}
+		}
+		return (willBreak ? 0.02F : 1.0F) * super.getPlayerRelativeBlockHardness(entityPlayer, world, x, y, z);
+	}
+	
 	@Override
 	public boolean onBlockActivated(World world, int x, int y, int z, EntityPlayer entityPlayer, int side, float hitX, float hitY, float hitZ) {
 		if (world.isRemote) {

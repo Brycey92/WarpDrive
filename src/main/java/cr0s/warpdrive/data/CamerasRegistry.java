@@ -13,11 +13,14 @@ public class CamerasRegistry {
 	private LinkedList<CameraRegistryItem> registry;
 	
 	public CamerasRegistry() {
-		registry = new LinkedList<CameraRegistryItem>();
+		registry = new LinkedList<>();
 	}
 	
 	public CameraRegistryItem getCameraByVideoChannel(World world, int videoChannel) {
-		CameraRegistryItem cam = null;
+		if (world == null) {
+			return null;
+		}
+		CameraRegistryItem cam;
 		for (Iterator<CameraRegistryItem> it = registry.iterator(); it.hasNext();) {
 			cam = it.next();
 			if (cam.videoChannel == videoChannel && cam.dimensionId == world.provider.dimensionId) {
@@ -39,7 +42,7 @@ public class CamerasRegistry {
 	}
 	
 	private CameraRegistryItem getCamByPosition(World world, ChunkPosition position) {
-		CameraRegistryItem cam = null;
+		CameraRegistryItem cam;
 		for (Iterator<CameraRegistryItem> it = registry.iterator(); it.hasNext();) {
 			cam = it.next();
 			if (cam.position.chunkPosX == position.chunkPosX && cam.position.chunkPosY == position.chunkPosY && cam.position.chunkPosZ == position.chunkPosZ
@@ -79,7 +82,7 @@ public class CamerasRegistry {
 	private void removeDeadCams(World world) {
 		// LocalProfiler.start("CamRegistry Removing dead cameras");
 		
-		CameraRegistryItem cam = null;
+		CameraRegistryItem cam;
 		for (Iterator<CameraRegistryItem> it = registry.iterator(); it.hasNext();) {
 			cam = it.next();
 			if (!isCamAlive(world, cam)) {
@@ -105,9 +108,8 @@ public class CamerasRegistry {
 		}
 	}
 	
-	public void updateInRegistry(World world, ChunkPosition position, int videoChannel, CameraType cameraType) {
-		CameraRegistryItem cam = new CameraRegistryItem(world, position, videoChannel, cameraType);
-		// WarpDrive.debugPrint("updateInRegistry " + cam.position.x + ", " + cam.position.y + ", " + cam.position.z);
+	public void updateInRegistry(World world, ChunkPosition position, int videoChannel, EnumCameraType enumCameraType) {
+		CameraRegistryItem cam = new CameraRegistryItem(world, position, videoChannel, enumCameraType);
 		removeDeadCams(world);
 		
 		if (isCamAlive(world, cam)) {
@@ -135,6 +137,9 @@ public class CamerasRegistry {
 	}
 	
 	public void printRegistry(World world) {
+		if (world == null) {
+			return;
+		}
 		WarpDrive.logger.info("Cameras registry for dimension " + world.provider.dimensionId + ":");
 		
 		for (CameraRegistryItem cam : registry) {

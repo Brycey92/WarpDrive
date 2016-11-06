@@ -2,6 +2,7 @@ package cr0s.warpdrive.event;
 
 import java.util.HashMap;
 
+import cr0s.warpdrive.data.VectorI;
 import net.minecraft.block.Block;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
@@ -22,24 +23,23 @@ import cr0s.warpdrive.config.Dictionary;
 import cr0s.warpdrive.config.WarpDriveConfig;
 import cr0s.warpdrive.world.SpaceTeleporter;
 
-/**
- *
- * @author Cr0s
- */
 public class LivingHandler {
-	private HashMap<Integer, Integer> entity_airBlock;
-	private HashMap<String, Integer> player_airTank;
-	private HashMap<String, Integer> player_cloakTicks;
+	private final HashMap<Integer, Integer> entity_airBlock;
+	private final HashMap<String, Integer> player_airTank;
+	private final HashMap<String, Integer> player_cloakTicks;
 	
-	private final int CLOAK_CHECK_TIMEOUT_TICKS = 100;
-	private final int AIR_BLOCK_TICKS = 20;
-	private final int AIR_TANK_TICKS = 300;
-	private final int AIR_DROWN_TICKS = 20;
+	private static final int CLOAK_CHECK_TIMEOUT_TICKS = 100;
+	private static final int AIR_BLOCK_TICKS = 20;
+	private static final int AIR_TANK_TICKS = 300;
+	private static final int AIR_DROWN_TICKS = 20;
+	private static final VectorI[] vAirOffsets = { new VectorI(0, 0, 0), new VectorI(0, 1, 0),
+		new VectorI(0, 1, 1), new VectorI(0, 1, -1), new VectorI(1, 1, 0), new VectorI(1, 1, 0),
+		new VectorI(0, 0, 1), new VectorI(0, 0, -1), new VectorI(1, 0, 0), new VectorI(1, 0, 0) };
 	
 	public LivingHandler() {
-		entity_airBlock = new HashMap<Integer, Integer>();
-		player_airTank = new HashMap<String, Integer>();
-		player_cloakTicks = new HashMap<String, Integer>();
+		entity_airBlock = new HashMap<>();
+		player_airTank = new HashMap<>();
+		player_cloakTicks = new HashMap<>();
 	}
 	
 	@SubscribeEvent
@@ -82,9 +82,19 @@ public class LivingHandler {
 		// If entity is in vacuum, check and start consuming air cells
 		if ( entity.worldObj.provider.dimensionId == WarpDriveConfig.G_SPACE_DIMENSION_ID
 		  || entity.worldObj.provider.dimensionId == WarpDriveConfig.G_HYPERSPACE_DIMENSION_ID) {
-			Block block1 = entity.worldObj.getBlock(x, y, z);
-			Block block2 = entity.worldObj.getBlock(x, y + 1, z);
-			boolean notInVacuum = block1.isAssociatedBlock(WarpDrive.blockAir) || block2.isAssociatedBlock(WarpDrive.blockAir);
+			// find an air block
+			VectorI vAirBlock = null;	
+			Block block;
+			for (VectorI vOffset : vAirOffsets) {
+				VectorI vPosition = new VectorI(x + vOffset.x, y + vOffset.y, z + vOffset.z);
+				block = entity.worldObj.getBlock(vPosition.x, vPosition.y, vPosition.z);
+				if (block.isAssociatedBlock(WarpDrive.blockAir)) {
+					vAirBlock = vPosition;
+					break;
+				}
+			}
+			
+			boolean notInVacuum = vAirBlock != null;
 			Integer air;
 			if (notInVacuum) {// In space with air blocks
 				air = entity_airBlock.get(entity.getEntityId());
@@ -93,17 +103,9 @@ public class LivingHandler {
 				} else if (air <= 1) {// time elapsed => consume air block
 					entity_airBlock.put(entity.getEntityId(), AIR_BLOCK_TICKS);
 					
-					int metadata;
-					if (block1.isAssociatedBlock(WarpDrive.blockAir)) {
-						metadata = entity.worldObj.getBlockMetadata(x, y, z);
-						if (metadata > 0 && metadata < 15) {
-							entity.worldObj.setBlockMetadataWithNotify(x, y, z, metadata - 1, 2);
-						}
-					} else {
-						metadata = entity.worldObj.getBlockMetadata(x, y + 1, z);
-						if (metadata > 0 && metadata < 15) {
-							entity.worldObj.setBlockMetadataWithNotify(x, y + 1, z, metadata - 1, 2);
-						}
+					int metadata = entity.worldObj.getBlockMetadata(vAirBlock.x, vAirBlock.y, vAirBlock.z);
+					if (metadata > 0 && metadata < 15) {
+						entity.worldObj.setBlockMetadataWithNotify(vAirBlock.x, vAirBlock.y, vAirBlock.z, metadata - 1, 2);
 					}
 				} else {
 					entity_airBlock.put(entity.getEntityId(), air - 1);
@@ -111,6 +113,11 @@ public class LivingHandler {
 			} else {// In space without air blocks
 				// Damage entity if in vacuum without protection
 				if (entity instanceof EntityPlayerMP) {
+					air = entity_airBlock.get(entity.getEntityId());
+					if (air != null && air > 0) {
+						entity_airBlock.put(entity.getEntityId(), air - 1);
+						return;
+					}
 					EntityPlayerMP player = (EntityPlayerMP) entity;
 					String playerName = player.getCommandSenderName();
 					air = player_airTank.get(playerName);
@@ -131,7 +138,7 @@ public class LivingHandler {
 										player_airTank.put(playerName, airTicks);
 									} else {
 										player_airTank.put(playerName, AIR_DROWN_TICKS);
-										player.attackEntityFrom(DamageSource.drown, 2.0F);
+										player.attackEntityFrom(WarpDrive.damageAsphyxia, 2.0F);
 									}
 								} else {
 									player_airTank.put(playerName, air - 1);
@@ -146,7 +153,7 @@ public class LivingHandler {
 									player_airTank.put(playerName, AIR_TANK_TICKS);
 								} else {
 									player_airTank.put(playerName, AIR_DROWN_TICKS);
-									entity.attackEntityFrom(DamageSource.drown, 2.0F);
+									entity.attackEntityFrom(WarpDrive.damageAsphyxia, 2.0F);
 								}
 							} else {
 								player_airTank.put(playerName, air - 1);
@@ -159,7 +166,7 @@ public class LivingHandler {
 							player_airTank.put(playerName, AIR_TANK_TICKS);
 						} else if (air <= 1) {
 							player_airTank.put(playerName, AIR_DROWN_TICKS);
-							entity.attackEntityFrom(DamageSource.drown, 2.0F);
+							entity.attackEntityFrom(WarpDrive.damageAsphyxia, 2.0F);
 						} else {
 							player_airTank.put(playerName, air - 1);
 						}
@@ -175,7 +182,7 @@ public class LivingHandler {
 					}
 				} else {// (in space, no air block and not a player)
 					entity_airBlock.put(entity.getEntityId(), 0);
-					entity.attackEntityFrom(DamageSource.drown, 2.0F);
+					entity.attackEntityFrom(WarpDrive.damageAsphyxia, 2.0F);
 				}
 			}
 		}
@@ -215,8 +222,8 @@ public class LivingHandler {
 					ItemStack emptyCell = new ItemStack(WarpDriveConfig.IC2_emptyCell.getItem(), 1, 0);
 					if (!entityPlayer.inventory.addItemStackToInventory(emptyCell)) {
 						World world = entityPlayer.worldObj;
-						EntityItem itemEnt = new EntityItem(world, entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ, emptyCell);
-						entityPlayer.worldObj.spawnEntityInWorld(itemEnt);
+						EntityItem entityItem = new EntityItem(world, entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ, emptyCell);
+						entityPlayer.worldObj.spawnEntityInWorld(entityItem);
 					}
 					entityPlayer.sendContainerToPlayer(entityPlayer.inventoryContainer);
 				}

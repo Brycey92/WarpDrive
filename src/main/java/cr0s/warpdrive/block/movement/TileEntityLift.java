@@ -64,24 +64,22 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 				mode = MODE_UP;
 			}
 			
-			isEnabled = computerEnabled && isPassableBlock(yCoord + 1)
-					&& isPassableBlock(yCoord + 2)
-					&& isPassableBlock(yCoord - 1)
-					&& isPassableBlock(yCoord - 2);
+			isEnabled = computerEnabled
+				     && isPassableBlock(yCoord + 1)
+				     && isPassableBlock(yCoord + 2)
+				     && isPassableBlock(yCoord - 1)
+				     && isPassableBlock(yCoord - 2);
 			
-			if (getEnergyStored() < WarpDriveConfig.LIFT_ENERGY_PER_ENTITY
-					|| !isEnabled) {
+			if (energy_getEnergyStored() < WarpDriveConfig.LIFT_ENERGY_PER_ENTITY || !isEnabled) {
 				mode = MODE_INACTIVE;
 				if (getBlockMetadata() != 0) {
-					worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord,
-							0, 2); // disabled
+					worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, 0, 2); // disabled
 				}
 				return;
 			}
 			
 			if (getBlockMetadata() != mode) {
-				worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord,
-						mode, 2); // current mode
+				worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, mode, 2); // current mode
 			}
 			
 			// Launch a beam: search non-air blocks under lift
@@ -112,57 +110,55 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	
 	private boolean isPassableBlock(int yPosition) {
 		Block block = worldObj.getBlock(xCoord, yPosition, zCoord);
-		//TODO: Make configurable or less specific
 		return block.isAssociatedBlock(Blocks.air)
-			|| block.isAssociatedBlock(Blocks.wall_sign)
-			|| block.isAssociatedBlock(Blocks.standing_sign)
-			|| worldObj.isAirBlock(xCoord, yPosition, zCoord);
+			|| worldObj.isAirBlock(xCoord, yPosition, zCoord)
+			|| block.getCollisionBoundingBoxFromPool(worldObj, xCoord, yPosition, zCoord) == null;
 	}
 	
 	private void liftEntity() {
 		final double CUBE_RADIUS = 0.4;
-		double xmax, zmax;
-		double xmin, zmin;
+		double xMax, zMax;
+		double xMin, zMin;
 		
-		xmin = xCoord + 0.5 - CUBE_RADIUS;
-		xmax = xCoord + 0.5 + CUBE_RADIUS;
-		zmin = zCoord + 0.5 - CUBE_RADIUS;
-		zmax = zCoord + 0.5 + CUBE_RADIUS;
+		xMin = xCoord + 0.5 - CUBE_RADIUS;
+		xMax = xCoord + 0.5 + CUBE_RADIUS;
+		zMin = zCoord + 0.5 - CUBE_RADIUS;
+		zMax = zCoord + 0.5 + CUBE_RADIUS;
 		
 		// Lift up
 		if (mode == MODE_UP) {
-			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xmin, firstUncoveredY, zmin, xmax, yCoord, zmax);
+			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xMin, firstUncoveredY, zMin, xMax, yCoord, zMax);
 			List list = worldObj.getEntitiesWithinAABBExcludingEntity(null, aabb);
 			if (list != null) {
 				for (Object o : list) {
 					if ( o != null
 					  && o instanceof EntityLivingBase
-					  && consumeEnergy(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, true)) {
+					  && energy_consume(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, true)) {
 						((EntityLivingBase) o).setPositionAndUpdate(xCoord + 0.5D, yCoord + 1.0D, zCoord + 0.5D);
 						PacketHandler.sendBeamPacket(worldObj,
 								new Vector3(xCoord + 0.5D, firstUncoveredY, zCoord + 0.5D),
 								new Vector3(xCoord + 0.5D, yCoord, zCoord + 0.5D),
 								1F, 1F, 0F, 40, 0, 100);
 						worldObj.playSoundEffect(xCoord + 0.5D, yCoord, zCoord + 0.5D, "warpdrive:hilaser", 4F, 1F);
-						consumeEnergy(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, false);
+						energy_consume(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, false);
 					}
 				}
 			}
 		} else if (mode == MODE_DOWN) {
-			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xmin,
-					Math.min(firstUncoveredY + 4.0D, yCoord), zmin, xmax, yCoord + 2.0D, zmax);
+			AxisAlignedBB aabb = AxisAlignedBB.getBoundingBox(xMin,
+					Math.min(firstUncoveredY + 4.0D, yCoord), zMin, xMax, yCoord + 2.0D, zMax);
 			List list = worldObj.getEntitiesWithinAABBExcludingEntity(null, aabb);
 			if (list != null) {
 				for (Object o : list) {
 					if ( o != null
 					  && o instanceof EntityLivingBase
-					  && consumeEnergy(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, true)) {
+					  && energy_consume(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, true)) {
 						((EntityLivingBase) o).setPositionAndUpdate(xCoord + 0.5D, firstUncoveredY, zCoord + 0.5D);
 						PacketHandler.sendBeamPacket(worldObj,
 								new Vector3(xCoord + 0.5D, yCoord, zCoord + 0.5D),
 								new Vector3(xCoord + 0.5D, firstUncoveredY, zCoord + 0.5D), 1F, 1F, 0F, 40, 0, 100);
 						worldObj.playSoundEffect(xCoord + 0.5D, yCoord, zCoord + 0.5D, "warpdrive:hilaser", 4F, 1F);
-						consumeEnergy(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, false);
+						energy_consume(WarpDriveConfig.LIFT_ENERGY_PER_ENTITY, false);
 					}
 				}
 			}
@@ -172,20 +168,32 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	@Override
 	public void readFromNBT(NBTTagCompound tag) {
 		super.readFromNBT(tag);
+		if (tag.hasKey("mode")) {
+			mode = clamp(-1, 2, tag.getByte("mode"));
+		}
+		if (tag.hasKey("computerEnabled")) {
+			computerEnabled = tag.getBoolean("computerEnabled");
+		}
+		if (tag.hasKey("computerMode")) {
+			computerMode = clamp(-1, 2, tag.getByte("computerMode"));
+		}
 	}
 	
 	@Override
 	public void writeToNBT(NBTTagCompound tag) {
 		super.writeToNBT(tag);
+		tag.setByte("mode", (byte)mode);
+		tag.setBoolean("computerEnabled", computerEnabled);
+		tag.setByte("computerMode", (byte)computerMode);
 	}
 	
 	@Override
-	public int getMaxEnergyStored() {
+	public int energy_getMaxStorage() {
 		return WarpDriveConfig.LIFT_MAX_ENERGY_STORED;
 	}
 	
 	@Override
-	public boolean canInputEnergy(ForgeDirection from) {
+	public boolean energy_canInput(ForgeDirection from) {
 		return true;
 	}
 	
@@ -194,9 +202,9 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	@Optional.Method(modid = "OpenComputers")
 	public Object[] mode(Context context, Arguments arguments) {
 		return mode(
-				new Object[] {
-						arguments.checkString(0)
-				}
+			new Object[] {
+				arguments.checkString(0)
+			}
 		);
 	}
 	
@@ -205,8 +213,9 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 	public Object[] active(Context context, Arguments arguments) {
 		if (arguments.count() == 1) {
 			computerEnabled = arguments.checkBoolean(0);
+			markDirty();
 		}
-		return new Object[] { computerEnabled ? false : isEnabled };
+		return new Object[] { !computerEnabled && isEnabled };
 	}
 	
 	private Object[] mode(Object[] arguments) {
@@ -218,6 +227,7 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 			} else {
 				computerMode = MODE_REDSTONE;
 			}
+			markDirty();
 		}
 		
 		switch (computerMode) {
@@ -246,7 +256,7 @@ public class TileEntityLift extends TileEntityAbstractEnergy {
 			if (arguments.length == 1) {
 				computerEnabled = toBool(arguments);
 			}
-			return new Object[] { computerEnabled ? false : isEnabled };
+			return new Object[] { !computerEnabled && isEnabled };
 		}
 		
 		return super.callMethod(computer, context, method, arguments);

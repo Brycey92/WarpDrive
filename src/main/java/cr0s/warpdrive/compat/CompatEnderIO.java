@@ -15,6 +15,7 @@ import net.minecraft.util.ChunkCoordinates;
 import cr0s.warpdrive.api.IBlockTransformer;
 import cr0s.warpdrive.api.ITransformation;
 import cr0s.warpdrive.config.WarpDriveConfig;
+import net.minecraftforge.common.util.Constants;
 
 public class CompatEnderIO implements IBlockTransformer {
 	
@@ -37,7 +38,7 @@ public class CompatEnderIO implements IBlockTransformer {
 	}
 	
 	@Override
-	public boolean isJumpReady(TileEntity tileEntity) {
+	public boolean isJumpReady(final Block block, final int metadata, final TileEntity tileEntity, StringBuilder reason) {
 		return true;
 	}
 	
@@ -53,19 +54,16 @@ public class CompatEnderIO implements IBlockTransformer {
 	}
 	
 	private static final short[] mrot = {  0,  1,  5,  4,  2,  3,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15 };
-	private static final byte NBTTagByteArrayId = 7; // new NBTTagByteArray(null).getId();
-	private static final byte NBTTagCompoundId = 10; // new NBTTagCompound().getId();
-	private static final byte NBTTagIntArrayId = 11; // new NBTTagIntArray(null).getId();
 	private static final Map<String, String> rotSideNames;
 	private static final Map<String, String> rotFaceNames;
 	static {
-		Map<String, String> map = new HashMap();
+		Map<String, String> map = new HashMap<>();
 		map.put("EAST", "SOUTH");
 		map.put("SOUTH", "WEST");
 		map.put("WEST", "NORTH");
 		map.put("NORTH", "EAST");
 		rotSideNames = Collections.unmodifiableMap(map);
-		map = new HashMap();
+		map = new HashMap<>();
 		map.put("face2", "face5");
 		map.put("face5", "face3");
 		map.put("face3", "face4");
@@ -99,14 +97,14 @@ public class CompatEnderIO implements IBlockTransformer {
 		}
 		return newData;
 	}
-	private NBTTagCompound rotate_conduit(final byte rotationSteps, NBTTagCompound conduit) {
-		NBTTagCompound newConduit = new NBTTagCompound();
-		Set<String> keys = conduit.func_150296_c();
+	private NBTTagCompound rotate_conduit(final byte rotationSteps, NBTTagCompound nbtConduit) {
+		NBTTagCompound nbtNewConduit = new NBTTagCompound();
+		Set<String> keys = nbtConduit.func_150296_c();
 		for (String key : keys) {
-			NBTBase base = conduit.getTag(key);
+			NBTBase base = nbtConduit.getTag(key);
 			switch(base.getId()) {
-			case NBTTagIntArrayId:	// "connections", "externalConnections"
-				int[] data = conduit.getIntArray(key);
+			case Constants.NBT.TAG_INT_ARRAY:	// "connections", "externalConnections"
+				int[] data = nbtConduit.getIntArray(key);
 				int[] newData = data.clone();
 				for (int index = 0; index < data.length; index++) {
 					switch (rotationSteps) {
@@ -123,40 +121,40 @@ public class CompatEnderIO implements IBlockTransformer {
 						break;
 					}
 				}
-				newConduit.setIntArray(key, newData);
+				nbtNewConduit.setIntArray(key, newData);
 				break;
 				
-			case NBTTagByteArrayId:	// "conModes", "signalColors", "forcedConnections", "signalStrengths"
-				newConduit.setByteArray(key, rotate_byteArray(rotationSteps, conduit.getByteArray(key)));
+			case Constants.NBT.TAG_BYTE_ARRAY:	// "conModes", "signalColors", "forcedConnections", "signalStrengths"
+				nbtNewConduit.setByteArray(key, rotate_byteArray(rotationSteps, nbtConduit.getByteArray(key)));
 				break;
 				
 			default:
 				String[] parts = key.split("\\.");
 				if (parts.length != 2 || !rotSideNames.containsKey(parts[1])) {
-					newConduit.setTag(key, base);
+					nbtNewConduit.setTag(key, base);
 				} else {
 					switch (rotationSteps) {
 					case 1:
-						newConduit.setTag(parts[0] + "." + rotSideNames.get(parts[1]), base);
+						nbtNewConduit.setTag(parts[0] + "." + rotSideNames.get(parts[1]), base);
 						break;
 					case 2:
-						newConduit.setTag(parts[0] + "." + rotSideNames.get(rotSideNames.get(parts[1])), base);
+						nbtNewConduit.setTag(parts[0] + "." + rotSideNames.get(rotSideNames.get(parts[1])), base);
 						break;
 					case 3:
-						newConduit.setTag(parts[0] + "." + rotSideNames.get(rotSideNames.get(rotSideNames.get(parts[1]))), base);
+						nbtNewConduit.setTag(parts[0] + "." + rotSideNames.get(rotSideNames.get(rotSideNames.get(parts[1]))), base);
 						break;
 					default:
-						newConduit.setTag(key, base);
+						nbtNewConduit.setTag(key, base);
 						break;
 					}
 				}
 				break;
 			}
 		}
-		return newConduit;
+		return nbtNewConduit;
 	}
 	
-	public void rotateReservoir(NBTTagCompound nbtTileEntity, final ITransformation transformation, final byte rotationSteps) {
+	private void rotateReservoir(NBTTagCompound nbtTileEntity, final ITransformation transformation, final byte rotationSteps) {
 		if (nbtTileEntity.hasKey("front")) {
 			short front = nbtTileEntity.getShort("front");
 			switch (rotationSteps) {
@@ -262,7 +260,7 @@ public class CompatEnderIO implements IBlockTransformer {
 		}
 		
 		// Faces
-		Map<String, Short> map = new HashMap();
+		Map<String, Short> map = new HashMap<>();
 		for (String key : rotFaceNames.keySet()) {
 			if (nbtTileEntity.hasKey(key)) {
 				short face = nbtTileEntity.getShort(key);
@@ -291,16 +289,16 @@ public class CompatEnderIO implements IBlockTransformer {
 		
 		// Conduits
 		if (nbtTileEntity.hasKey("conduits")) {
-			NBTTagList conduits = nbtTileEntity.getTagList("conduits", NBTTagCompoundId);
-			NBTTagList newConduits = new NBTTagList(); 
-			for (int index = 0; index < conduits.tagCount(); index++) {
-				NBTTagCompound conduitTypeAndContent = conduits.getCompoundTagAt(index);
+			NBTTagList nbtConduits = nbtTileEntity.getTagList("conduits", Constants.NBT.TAG_COMPOUND);
+			NBTTagList nbtNewConduits = new NBTTagList(); 
+			for (int index = 0; index < nbtConduits.tagCount(); index++) {
+				NBTTagCompound conduitTypeAndContent = nbtConduits.getCompoundTagAt(index);
 				NBTTagCompound newConduitTypeAndContent = new NBTTagCompound();
 				newConduitTypeAndContent.setString("conduitType", conduitTypeAndContent.getString("conduitType"));
 				newConduitTypeAndContent.setTag("conduit", rotate_conduit(rotationSteps, conduitTypeAndContent.getCompoundTag("conduit")));
-				newConduits.appendTag(newConduitTypeAndContent);
+				nbtNewConduits.appendTag(newConduitTypeAndContent);
 			}
-			nbtTileEntity.setTag("conduits", newConduits);
+			nbtTileEntity.setTag("conduits", nbtNewConduits);
 		}
 		return metadata;
 	}

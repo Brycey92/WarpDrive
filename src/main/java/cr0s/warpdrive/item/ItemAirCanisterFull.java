@@ -6,7 +6,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.IIcon;
 import cr0s.warpdrive.WarpDrive;
 import cr0s.warpdrive.api.IAirCanister;
-import cr0s.warpdrive.data.ComponentType;
+import cr0s.warpdrive.data.EnumComponentType;
 
 public class ItemAirCanisterFull extends Item implements IAirCanister {
 	
@@ -22,22 +22,12 @@ public class ItemAirCanisterFull extends Item implements IAirCanister {
 	
 	@Override
 	public void registerIcons(IIconRegister iconRegister) {
-		icon = iconRegister.registerIcon("warpdrive:componentAirCanisterFull");
+		icon = iconRegister.registerIcon("warpdrive:AirCanisterFull");
 	}
 	
 	@Override
 	public IIcon getIconFromDamage(int damage) {
 		return icon;
-	}
-
-	@Override
-	public ItemStack emptyDrop(ItemStack itemStack) {
-		return WarpDrive.itemComponent.getItemStackNoCache(ComponentType.AIR_CANISTER, 1);
-	}
-	
-	@Override
-	public ItemStack fullDrop(ItemStack itemStack) {
-		return new ItemStack(WarpDrive.itemAirCanisterFull,1);
 	}
 	
 	@Override
@@ -51,5 +41,15 @@ public class ItemAirCanisterFull extends Item implements IAirCanister {
 	@Override
 	public boolean containsAir(ItemStack itemStack) {
 		return true;
+	}
+	
+	@Override
+	public ItemStack emptyDrop(ItemStack itemStack) {
+		return ItemComponent.getItemStackNoCache(EnumComponentType.AIR_CANISTER, 1);
+	}
+	
+	@Override
+	public ItemStack fullDrop(ItemStack itemStack) {
+		return new ItemStack(WarpDrive.itemAirCanisterFull, 1);
 	}
 }

@@ -52,21 +52,21 @@ public class VectorI implements Cloneable {
 	}
 	
 	public VectorI(final MovingObjectPosition movingObject) {
-		this.x = movingObject.blockX;
-		this.y = movingObject.blockY;
-		this.z = movingObject.blockZ;
+		x = movingObject.blockX;
+		y = movingObject.blockY;
+		z = movingObject.blockZ;
 	}
 	
 	public VectorI(final ChunkCoordinates chunkCoordinates) {
-		this.x = chunkCoordinates.posX;
-		this.y = chunkCoordinates.posY;
-		this.z = chunkCoordinates.posZ;
+		x = chunkCoordinates.posX;
+		y = chunkCoordinates.posY;
+		z = chunkCoordinates.posZ;
 	}
 	
 	public VectorI(final ForgeDirection direction) {
-		this.x = direction.offsetX;
-		this.y = direction.offsetY;
-		this.z = direction.offsetZ;
+		x = direction.offsetX;
+		y = direction.offsetY;
+		z = direction.offsetZ;
 	}
 	
 	
@@ -107,16 +107,12 @@ public class VectorI implements Cloneable {
 			return null;
 		}
 		if (world instanceof WorldServer) {
-			boolean isLoaded = false;
+			boolean isLoaded;
 			if (((WorldServer)world).getChunkProvider() instanceof ChunkProviderServer) {
 				ChunkProviderServer chunkProviderServer = (ChunkProviderServer) ((WorldServer)world).getChunkProvider();
 				try {
-					Chunk chunk = (Chunk)chunkProviderServer.loadedChunkHashMap.getValueByKey(ChunkCoordIntPair.chunkXZ2Int(x >> 4, z >> 4));
-					if (chunk == null) {
-						isLoaded = false;
-					} else {
-						isLoaded = chunk.isChunkLoaded;
-					}
+					Chunk chunk = (Chunk) chunkProviderServer.loadedChunkHashMap.getValueByKey(ChunkCoordIntPair.chunkXZ2Int(x >> 4, z >> 4));
+					isLoaded = chunk != null && chunk.isChunkLoaded;
 				} catch (NoSuchFieldError exception) {
 					isLoaded = chunkProviderServer.chunkExists(x >> 4, z >> 4);
 				}
@@ -238,7 +234,11 @@ public class VectorI implements Cloneable {
 	
 	@Override
 	public int hashCode() {
-		return (x + " " + y + " " + z).hashCode();
+		return (x + "X" + y + "Y" + z + "lem").hashCode();
+	}
+	
+	public boolean equals(final TileEntity tileEntity) {
+		return (x == tileEntity.xCoord) && (y == tileEntity.yCoord) && (z == tileEntity.zCoord);
 	}
 	
 	@Override
@@ -246,6 +246,9 @@ public class VectorI implements Cloneable {
 		if (object instanceof VectorI) {
 			VectorI vector = (VectorI) object;
 			return (x == vector.x) && (y == vector.y) && (z == vector.z);
+		} else if (object instanceof TileEntity) {
+			TileEntity tileEntity = (TileEntity) object;
+			return (x == tileEntity.xCoord) && (y == tileEntity.yCoord) && (z == tileEntity.zCoord);
 		}
 		
 		return false;
@@ -319,10 +322,41 @@ public class VectorI implements Cloneable {
 		return x * x + y * y + z * z;
 	}
 	
-	public VectorI scale(final int amount) {
-		x *= amount;
-		y *= amount;
-		z *= amount;
+	public VectorI scale(final float amount) {
+		x = Math.round(x * amount);
+		y = Math.round(y * amount);
+		z = Math.round(z * amount);
 		return this;
+	}
+	
+	public void rotateByAngle(final double yaw, final double pitch) {
+		rotateByAngle(yaw, pitch, 0.0D);
+	}
+	
+	public void rotateByAngle(final double yaw, final double pitch, final double roll) {
+		double yawRadians = Math.toRadians(yaw);
+		double yawCosinus = Math.cos(yawRadians);
+		double yawSinus = Math.sin(yawRadians);
+		double pitchRadians = Math.toRadians(pitch);
+		double pitchCosinus = Math.cos(pitchRadians);
+		double pitchSinus = Math.sin(pitchRadians);
+		double rollRadians = Math.toRadians(roll);
+		double rollCosinus = Math.cos(rollRadians);
+		double rollSinus = Math.sin(rollRadians);
+		
+		double oldX = x;
+		double oldY = y;
+		double oldZ = z;
+		
+		x = (int)Math.round(( oldX * yawCosinus * pitchCosinus
+			+ oldZ * (yawCosinus * pitchSinus * rollSinus - yawSinus * rollCosinus)
+			+ oldY * (yawCosinus * pitchSinus * rollCosinus + yawSinus * rollSinus)));
+		
+		z = (int)Math.round(( oldX * yawSinus * pitchCosinus
+			+ oldZ * (yawSinus * pitchSinus * rollSinus + yawCosinus * rollCosinus)
+			+ oldY * (yawSinus * pitchSinus * rollCosinus - yawCosinus * rollSinus)));
+		
+		y = (int)Math.round((-oldX * pitchSinus + oldZ * pitchCosinus * rollSinus
+			+ oldY * pitchCosinus * rollCosinus));
 	}
 }
