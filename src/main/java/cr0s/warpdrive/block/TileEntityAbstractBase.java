@@ -17,9 +17,10 @@ import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -204,10 +205,11 @@ public abstract class TileEntityAbstractBase extends TileEntity implements IBloc
 	// searching methods
 	
 	public static final ForgeDirection[] UP_DIRECTIONS = { ForgeDirection.UP, ForgeDirection.NORTH, ForgeDirection.SOUTH, ForgeDirection.WEST, ForgeDirection.EAST };
-	public static Set<VectorI> getConnectedBlocks(World world, VectorI start, ForgeDirection[] directions, HashSet<Block> whitelist, int maxRange, VectorI... ignore) {
-		return getConnectedBlocks(world, Arrays.asList(start), directions, whitelist, maxRange, ignore);
+	public static final ForgeDirection[] HORIZONTAL_DIRECTIONS = { ForgeDirection.NORTH, ForgeDirection.SOUTH, ForgeDirection.WEST, ForgeDirection.EAST };
+	public static Set<VectorI> getConnectedBlocks(World world, final VectorI start, final ForgeDirection[] directions, final Set<Block> whitelist, final int maxRange, final VectorI... ignore) {
+		return getConnectedBlocks(world, Collections.singletonList(start), directions, whitelist, maxRange, ignore);
 	}
-	public static Set<VectorI> getConnectedBlocks(World world, Collection<VectorI> start, ForgeDirection[] directions, HashSet<Block> whitelist, int maxRange, VectorI... ignore) {
+	public static Set<VectorI> getConnectedBlocks(World world, final Collection<VectorI> start, final ForgeDirection[] directions, final Set<Block> whitelist, final int maxRange, final VectorI... ignore) {
 		Set<VectorI> toIgnore = new HashSet<>();
 		if (ignore != null) {
 			toIgnore.addAll(Arrays.asList(ignore));
@@ -256,10 +258,12 @@ public abstract class TileEntityAbstractBase extends TileEntity implements IBloc
 	}
 	
 	protected static double toDouble(Object object) {
+		assert(!(object instanceof Object[]));
 		return Double.parseDouble(object.toString());
 	}
 	
 	protected static float toFloat(Object object) {
+		assert(!(object instanceof Object[]));
 		return Float.parseFloat(object.toString());
 	}
 	
@@ -267,6 +271,7 @@ public abstract class TileEntityAbstractBase extends TileEntity implements IBloc
 		if (object == null) {
 			 return false;
 		}
+		assert(!(object instanceof Object[]));
 		if (object instanceof Boolean) {
 			 return ((Boolean) object);
 		}
@@ -274,15 +279,15 @@ public abstract class TileEntityAbstractBase extends TileEntity implements IBloc
 		return string.equals("true") || string.equals("1.0") || string.equals("1") || string.equals("y") || string.equals("yes");
 	}
 	
-	protected static int clamp(final int min, final int max, final int value) {
+	public static int clamp(final int min, final int max, final int value) {
 		return Math.min(max, Math.max(value, min));
 	}
 	
-	protected static float clamp(final float min, final float max, final float value) {
+	public static float clamp(final float min, final float max, final float value) {
 		return Math.min(max, Math.max(value, min));
 	}
 	
-	protected static double clamp(final double min, final double max, final double value) {
+	public static double clamp(final double min, final double max, final double value) {
 		return Math.min(max, Math.max(value, min));
 	}
 	

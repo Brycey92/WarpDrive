@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
 import cr0s.warpdrive.block.*;
+import cr0s.warpdrive.block.atomic.*;
 import cr0s.warpdrive.block.detection.*;
 import cr0s.warpdrive.block.forcefield.*;
 import cr0s.warpdrive.block.hull.BlockHullStairs;
@@ -16,6 +17,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemArmor.ArmorMaterial;
 import net.minecraft.item.ItemDye;
 import net.minecraft.nbt.NBTTagCompound;
@@ -110,7 +112,7 @@ import cr0s.warpdrive.world.HyperSpaceWorldGenerator;
 import cr0s.warpdrive.world.SpaceWorldProvider;
 import cr0s.warpdrive.world.SpaceWorldGenerator;
 
-@Mod(modid = WarpDrive.MODID, name = "WarpDrive", version = WarpDrive.VERSION, dependencies = "after:IC2API;" + " after:CoFHCore;" + " after:ComputerCraft;"
+@Mod(modid = WarpDrive.MODID, name = "WarpDrive", version = WarpDrive.VERSION, dependencies = "after:IC2;" + " after:CoFHCore;" + " after:ComputerCraft;"
 		+ " after:OpenComputer;" + " after:CCTurtle;" + " after:gregtech;" + " after:AppliedEnergistics;" + " after:EnderIO;")
 public class WarpDrive implements LoadingCallback {
 	public static final String MODID = "WarpDrive";
@@ -149,6 +151,15 @@ public class WarpDrive implements LoadingCallback {
 	public static Block[] blockForceFields;
 	public static Block[] blockForceFieldProjectors;
 	public static Block[] blockForceFieldRelays;
+	public static Block blockAcceleratorController;
+	public static Block blockAcceleratorControlPoint;
+	public static Block blockParticlesCollider;
+	public static Block blockParticlesInjector;
+	public static Block blockVoidShellPlain;
+	public static Block blockVoidShellGlass;
+	public static Block[] blockElectromagnetPlain;
+	public static Block[] blockElectromagnetGlass;
+	public static Block[] blockChiller;
 	public static BlockDecorative blockDecorative;
 	public static Block[] blockHulls_plain;
 	public static Block[] blockHulls_glass;
@@ -165,7 +176,7 @@ public class WarpDrive implements LoadingCallback {
 	public static ItemForceFieldUpgrade itemForceFieldUpgrade;
 	
 	public static final ArmorMaterial armorMaterial = EnumHelper.addArmorMaterial("WARP", 18, new int[] { 2, 6, 5, 2 }, 9);
-	public static ItemHelmet itemHelmet;
+	public static ItemArmor[] itemWarpArmor;
 	public static ItemAirCanisterFull itemAirCanisterFull;
 	
 	public static DamageAsphyxia damageAsphyxia;
@@ -413,6 +424,50 @@ public class WarpDrive implements LoadingCallback {
 		GameRegistry.registerBlock(blockSecurityStation, ItemBlockAbstractBase.class, "blockSecurityStation");
 		GameRegistry.registerTileEntity(TileEntitySecurityStation.class, MODID + ":blockSecurityStation");
 		*/
+		/*
+		// ACCELERATOR CONTROLLER
+		blockAcceleratorController = new BlockAcceleratorController();
+		GameRegistry.registerBlock(blockAcceleratorController, ItemBlockAbstractBase.class, "blockAcceleratorController");
+		GameRegistry.registerTileEntity(TileEntityAcceleratorController.class, MODID + ":blockAcceleratorController");
+		/**/
+		// ACCELERATOR CONTROL POINT 
+		blockAcceleratorControlPoint = new BlockAcceleratorControlPoint();
+		GameRegistry.registerBlock(blockAcceleratorControlPoint, ItemBlockAbstractBase.class, "blockAcceleratorControlPoint");
+		GameRegistry.registerTileEntity(TileEntityAcceleratorControlPoint.class, MODID + ":blockAcceleratorControlPoint");
+		
+		// PARTICLES COLLIDER 
+		blockParticlesCollider = new BlockParticlesCollider();
+		GameRegistry.registerBlock(blockParticlesCollider, ItemBlockAbstractBase.class, "blockParticlesCollider");
+		
+		// PARTICLES INJECTOR 
+		blockParticlesInjector = new BlockParticlesInjector();
+		GameRegistry.registerBlock(blockParticlesInjector, ItemBlockAbstractBase.class, "blockParticlesInjector");
+		GameRegistry.registerTileEntity(TileEntityParticlesInjector.class, MODID + ":blockParticlesInjector");
+		
+		// VOID SHELL PLAIN/GLASS 
+		blockVoidShellPlain = new BlockVoidShellPlain();
+		GameRegistry.registerBlock(blockVoidShellPlain, ItemBlockAbstractBase.class, "blockVoidShellPlain");
+		blockVoidShellGlass = new BlockVoidShellGlass();
+		GameRegistry.registerBlock(blockVoidShellGlass, ItemBlockAbstractBase.class, "blockVoidShellGlass");
+		
+		blockElectromagnetPlain = new Block[3];
+		blockElectromagnetGlass = new Block[3];
+		blockChiller = new Block[3];
+		for(byte tier = 1; tier <= 3; tier++) {
+			int index = tier - 1;
+			// ELECTROMAGNETS PLAIN 
+			blockElectromagnetPlain[index] = new BlockElectromagnetPlain(tier);
+			GameRegistry.registerBlock(blockElectromagnetPlain[index], ItemBlockAbstractBase.class, "blockElectromagnetPlain" + tier);
+			
+			// ELECTROMAGNETS GLASS
+			blockElectromagnetGlass[index] = new BlockElectromagnetGlass(tier);
+			GameRegistry.registerBlock(blockElectromagnetGlass[index], ItemBlockAbstractBase.class, "blockElectromagnetGlass" + tier);
+			
+			// CHILLER
+			blockChiller[index] = new BlockChiller(tier);
+			GameRegistry.registerBlock(blockChiller[index], ItemBlockAbstractBase.class, "blockChiller" + tier);
+		}
+		
 		// DECORATIVE
 		blockDecorative = new BlockDecorative();
 		GameRegistry.registerBlock(blockDecorative, ItemBlockDecorative.class, "blockDecorative");
@@ -454,8 +509,11 @@ public class WarpDrive implements LoadingCallback {
 		itemCrystalToken = new ItemCrystalToken();
 		GameRegistry.registerItem(itemCrystalToken, "itemCrystalToken");
 		
-		itemHelmet = new ItemHelmet(armorMaterial, 0);
-		GameRegistry.registerItem(itemHelmet, "itemHelmet");
+		itemWarpArmor = new ItemArmor[4];
+		for (int armorPart = 0; armorPart < 4; armorPart++) {
+			itemWarpArmor[armorPart] = new ItemWarpArmor(armorMaterial, 3, armorPart);
+			GameRegistry.registerItem(itemWarpArmor[armorPart], "itemWarpArmor_" + ItemWarpArmor.suffixes[armorPart]);
+		}
 		
 		itemAirCanisterFull = new ItemAirCanisterFull();
 		GameRegistry.registerItem(itemAirCanisterFull, "itemAirCanisterFull");
@@ -668,7 +726,8 @@ public class WarpDrive implements LoadingCallback {
 						mapping.remap(Item.getItemFromBlock(blockGas));
 						break;
 					case "WarpDrive:helmet":
-						mapping.remap(itemHelmet);
+					case "WarpDrive:itemHelmet":
+						mapping.remap(itemWarpArmor[0]);
 						break;
 					case "WarpDrive:iridiumBlock":
 						mapping.remap(Item.getItemFromBlock(blockIridium));

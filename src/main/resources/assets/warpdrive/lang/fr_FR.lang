@@ -37,7 +37,10 @@ item.warpdrive.crafting.ElectromagneticProjector.name=Projecteur électromagnét
 item.warpdrive.crafting.Superconductor.name=Superconducteur
 
 item.warpdrive.armor.AirCanisterFull.name=Cartouche d'air
-item.warpdrive.armor.Helmet.name=Casque warp
+item.warpdrive.armor.helmet.name=Casque warp
+item.warpdrive.armor.chestplate.name=Plastron warp
+item.warpdrive.armor.leggings.name=Jambières warp
+item.warpdrive.armor.boots.name=Bottes warp
 
 item.warpdrive.energy.IC2reactorLaserFocus.name=Focus laser pour réacteur IC2
 
@@ -156,6 +159,37 @@ tile.warpdrive.machines.ChunkLoader.name=Chargeur de chunk
 tile.warpdrive.machines.Laser.name=Laser
 tile.warpdrive.machines.LaserMedium.name=Milieu amplificateur
 
+tile.warpdrive.atomic.accelerator_controller.name=Controlleur d'accélérateurs
+tile.warpdrive.atomic.accelerator_controller.tooltip=Contrôle un ou plusieurs accélérateurs de particules.\nDoit être placé à coté d'un électroaimant.
+tile.warpdrive.atomic.accelerator_control_point.name=Point de contrôle d'accélérateur
+tile.warpdrive.atomic.accelerator_control_point.tooltip=Contrôle un noeud de l'accélérateur tel que collisionneur, entrée et sortie.\nDoit être placé à exactement 1 block de distance d'une coquille sous vide.\nStocke les résultats dans tout conteneur directement connecté.
+tile.warpdrive.atomic.chiller1.name=Refroidisseur élémentaire
+tile.warpdrive.atomic.chiller1.tooltip=Refroidit progressivement les électroaimants d'un même accélérateur de particules.\nDoit être placé à coté d'un électroaimant.
+tile.warpdrive.atomic.chiller2.name=Refroidisseur avancé
+tile.warpdrive.atomic.chiller2.tooltip=Refroidit progressivement les électroaimants d'un même accélérateur de particules.\nDoit être placé à coté d'un électroaimant.
+tile.warpdrive.atomic.chiller3.name=Refroidisseur supérieur
+tile.warpdrive.atomic.chiller3.tooltip=Refroidit progressivement les électroaimants d'un même accélérateur de particules.\nDoit être placé à coté d'un électroaimant.
+tile.warpdrive.atomic.electromagnet1.plain.name=Electroaimant élémentaire
+tile.warpdrive.atomic.electromagnet1.plain.tooltip=Accélère, focalise et oriente les particules dans la coquille sous vide attachée.
+tile.warpdrive.atomic.electromagnet1.glass.name=Vitre d'électroaiment élémentaire
+tile.warpdrive.atomic.electromagnet1.glass.tooltip=Variante transparente de l'électroaimant.
+tile.warpdrive.atomic.electromagnet2.plain.name=Electroaimant avancé
+tile.warpdrive.atomic.electromagnet2.plain.tooltip=Accélère, focalise et oriente les particules dans la coquille sous vide attachée.
+tile.warpdrive.atomic.electromagnet2.glass.name=Vitre d'électroaimant avancé
+tile.warpdrive.atomic.electromagnet2.glass.tooltip=Variante transparente de l'électroaimant.
+tile.warpdrive.atomic.electromagnet3.plain.name=Electroaimant supérieur
+tile.warpdrive.atomic.electromagnet3.plain.tooltip=Accélère, focalise et oriente les particules dans la coquille sous vide attachée.
+tile.warpdrive.atomic.electromagnet3.glass.name=Vite d'électroaimant supérieur
+tile.warpdrive.atomic.electromagnet3.glass.tooltip=Variante transparente de l'électroaimant.
+tile.warpdrive.atomic.particles_collider.name=Collisionneur de particules
+tile.warpdrive.atomic.particles_collider.tooltip=Dévie les particules pour qu'elles entrent en collision frontale ou contre une cible.\nRequiert 12 blocs et un Point de contrôle d'accélérateur qui collectera les résultats.
+tile.warpdrive.atomic.particles_injector.name=Injecteur de particules
+tile.warpdrive.atomic.particles_injector.tooltip=Injecte des items ou particules depuis un conteneur attaché dans un accélérateur élémentaire.
+tile.warpdrive.atomic.void_shell_plain.name=Coquille sous vide
+tile.warpdrive.atomic.void_shell_plain.tooltip=Fournit 2 canaux de parcours des particules dans un accélérateur.\nSe connecte uniquement horizontalement avec d'autres Coquille sous vide.
+tile.warpdrive.atomic.void_shell_glass.name=Vitre de coquille sous vide
+tile.warpdrive.atomic.void_shell_glass.tooltip=Variante transparente de la Coquille sous vide permettant de voir les particules en mouvement.
+
 tile.warpdrive.building.ShipScanner.name=Scanneur de vaisseau
 
 tile.warpdrive.collection.LaserTreeFarm.name=Laser de plantation arboricole
@@ -209,7 +243,9 @@ tile.warpdrive.forcefield.relay3.tooltip=Supporte jusqu'à 1 augmentation de cha
 
 tile.warpdrive.movement.Lift.name=Ascenseur
 tile.warpdrive.movement.ShipController.name=Controlleur de vaisseau
+tile.warpdrive.movement.ShipController.tooltip=Défini l'avant du vaisseau par rapport au coeur. Attache un ordinateur pour ouvrir l'interface utilisateur.\nDoit être placé horizontalement directement à coté du Coeur de vaisseau.
 tile.warpdrive.movement.ShipCore.name=Coeur de vaisseau
+tile.warpdrive.movement.ShipCore.tooltip=Défini le centre du vaisseau par rapport au controlleur. Connecte une source d'énergie pour charger le coeur\nDoit être placé horizontalement directement à coté du Controlleur de vaisseau.
 tile.warpdrive.movement.Transporter.name=Transporteur
 
 tile.warpdrive.weapon.LaserCamera.name=Laser + Caméra
@@ -454,6 +490,6 @@ warpdrive.IC2reactorLaserMonitor.noReactor=Pas de réacteur IC2 trouvé!
 warpdrive.IC2reactorLaserMonitor.multipleReactors=%1$d réacteur(s) connecté(s).
 warpdrive.transporter.status=De %1$.0f %2$.0f %3$.0f à %4$.0f %5$.0f %6$.0f
 
-warpdrive.tooltip.itemTag.breathingIC2=Permet de §brespirer dans le vide§r en consommant des cellules d'air comprimé de IC2 depuis l'inventaire.
+warpdrive.tooltip.itemTag.breathingHelmet=Permet de §brespirer dans le vide§r en consommant des cartouches d'air et des cellules d'air comprimé de IC2 depuis l'inventaire.
 warpdrive.tooltip.itemTag.flyInSpace=Jetpack compatible avec une utilisation §bspatiale§r.
 warpdrive.tooltip.itemTag.noFallDamage=§bAbsorbe les damages de chute§r.
