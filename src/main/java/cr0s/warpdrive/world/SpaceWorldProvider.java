@@ -1,5 +1,6 @@
 package cr0s.warpdrive.world;
 
+import cr0s.warpdrive.render.RenderSpaceSky;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.util.ChunkCoordinates;
@@ -33,8 +34,8 @@ public class SpaceWorldProvider extends WorldProvider {
 	
 	@SideOnly(Side.CLIENT)
 	@Override
-	public float getStarBrightness(float par1) {
-		return 1.0F;
+	public float getStarBrightness(float partialTicks) {
+		return 0.9F;
 	}
 	
 	@Override
@@ -49,7 +50,7 @@ public class SpaceWorldProvider extends WorldProvider {
 	
 	@Override
 	public double getHorizon() {
-		return 1;
+		return -256;
 	}
 	
 	@Override
@@ -68,8 +69,8 @@ public class SpaceWorldProvider extends WorldProvider {
 	}
 	
 	@Override
-	public float calculateCelestialAngle(long par1, float par3) {
-		return 0F;
+	public float calculateCelestialAngle(long time, float partialTick) {
+		return 0.0F;
 	}
 	
 	@Override
@@ -98,8 +99,12 @@ public class SpaceWorldProvider extends WorldProvider {
 	
 	@Override
 	public Vec3 getSkyColor(Entity cameraEntity, float partialTicks) {
-		setCloudRenderer(new RenderBlank());
-		// setSkyRenderer(new SpaceSkyRenderer());
+		if (getCloudRenderer() == null) {
+			setCloudRenderer(RenderBlank.getInstance());
+		}
+		if (getSkyRenderer() == null) {
+			setSkyRenderer(RenderSpaceSky.getInstance());
+		}
 		return Vec3.createVectorHelper(0.0D, 0.0D, 0.0D);
 	}
 	
